@@ -81,7 +81,7 @@ const HeroSection = () => {
               <div className="device-mock-screen">
                 <iframe
                   className="w-full h-full object-cover"
-                  src="https://www.youtube.com/embed/MBYgQBK6XJc?autoplay=1&mute=1&loop=1&playlist=MBYgQBK6XJc&controls=0&playsinline=1&modestbranding=1&rel=0"
+                  src="https://www.youtube.com/embed/MBYgQBK6XJc?autoplay=1&mute=1&loop=1&playlist=MBYgQBK6XJc&controls=1&playsinline=1&modestbranding=1&rel=0"
                   title="Tour Virtual"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
