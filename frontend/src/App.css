@@ -98,11 +98,14 @@
   background: #000;
   line-height: 0;
 }
-.device-mock-screen video {
+.device-mock-screen video,
+.device-mock-screen iframe {
   display: block;
-  width: 100%;
-  height: auto;
-  max-height: 75vh;
+  height: 70vh;
+  max-height: 600px;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 9 / 16;
   border-radius: 16px;
 }
 
