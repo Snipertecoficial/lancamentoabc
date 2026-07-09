@@ -10,6 +10,7 @@ import FinalForm from "@/components/FinalForm";
 import Slider3D from "@/components/Slider3D";
 import Footer from "@/components/Footer";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
+import CookieConsent from "@/components/CookieConsent";
 import ScrollProgress from "@/components/ScrollProgress";
 import LLMContext from "@/components/LLMContext";
 
@@ -39,6 +40,7 @@ const Home = () => {
       <Footer />
       <LLMContext />
       <FloatingWhatsApp />
+      <CookieConsent />
     </div>
   );
 };
