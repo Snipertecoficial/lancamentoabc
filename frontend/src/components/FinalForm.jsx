@@ -15,19 +15,30 @@ const FinalForm = () => {
       <div className="container-lp relative z-10">
         <div className="grid lg:grid-cols-[1fr_460px] gap-10 lg:gap-16 items-center">
           <Reveal>
-            <div className="section-eyebrow mb-4">Próximo passo</div>
+            <div className="section-eyebrow mb-4 bg-red-500/20 text-red-400 border border-red-500/30 font-bold px-4 py-1 inline-block rounded-full">OFERTA POR TEMPO LIMITADO</div>
             <h2 className="section-title mb-5">
-              Garanta sua <em>unidade</em> no Landscape
+              Garanta sua <em>unidade</em> neste Lançamento
             </h2>
             <p className="font-sans text-base md:text-lg text-[#F5F2ED]/75 leading-relaxed mb-6 max-w-xl">
-              As melhores unidades saem primeiro. Fale agora com um corretor especialista e receba <span className="text-[#D9BB78]">tabela de valores, plantas e condições exclusivas de lançamento</span>.
+              Antecipe-se e garanta as melhores condições de <span className="text-[#D9BB78]">Lançamento (entrega em 3 anos)</span>. Montamos um fluxo personalizado para caber no seu bolso:
             </p>
-            <ul className="space-y-3 font-sans text-[#F5F2ED]/80">
-              <li className="flex items-start gap-3"><span className="text-[#D9BB78]">✓</span> Tabela oficial de vendas atualizada</li>
-              <li className="flex items-start gap-3"><span className="text-[#D9BB78]">✓</span> Simulação financeira sob medida</li>
-              <li className="flex items-start gap-3"><span className="text-[#D9BB78]">✓</span> Reserva de unidade com melhor vista</li>
-              <li className="flex items-start gap-3"><span className="text-[#D9BB78]">✓</span> Atendimento humano — sem robotização</li>
+            <ul className="space-y-4 font-sans text-[#F5F2ED] mb-6">
+              <li className="flex items-center gap-4 bg-[#0A1A2E]/50 p-3 rounded-lg border border-[#D9BB78]/20">
+                <span className="text-xl font-display text-[#D9BB78] min-w-[70px]">60 m²</span>
+                <span className="text-sm md:text-base text-[#F5F2ED]/80">Mensais a partir de <strong className="text-white">R$ 3.900</strong></span>
+              </li>
+              <li className="flex items-center gap-4 bg-[#0A1A2E]/50 p-3 rounded-lg border border-[#D9BB78]/20">
+                <span className="text-xl font-display text-[#D9BB78] min-w-[70px]">68 m²</span>
+                <span className="text-sm md:text-base text-[#F5F2ED]/80">Mensais a partir de <strong className="text-white">R$ 4.900</strong></span>
+              </li>
+              <li className="flex items-center gap-4 bg-[#0A1A2E]/50 p-3 rounded-lg border border-[#D9BB78]/20">
+                <span className="text-xl font-display text-[#D9BB78] min-w-[70px]">74 m²</span>
+                <span className="text-sm md:text-base text-[#F5F2ED]/80">Mensais a partir de <strong className="text-white">R$ 5.200</strong></span>
+              </li>
             </ul>
+            <p className="text-sm text-[#F5F2ED]/60 italic">
+              * Prefere uma parcela mais baixa? Aceitamos entrada facilitada e parcela balão.
+            </p>
           </Reveal>
 
           <Reveal delay={150}>

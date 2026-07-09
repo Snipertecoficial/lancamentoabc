@@ -27,6 +27,13 @@ export const WA_MESSAGES = {
   general: "Oi! Quero saber mais sobre os apartamentos em SBC.",
   plant: (metragem, config) =>
     `Oi! Tenho interesse na planta de ${metragem} (${config}) do lançamento em SBC. Pode me passar valores e condições?`,
-  leadForm: (name, phone, intent) =>
-    `Oi! Meu nome é ${name || "[nome]"}. Meu WhatsApp: ${phone || "[whatsapp]"}. Quero ${intent === "invest" ? "INVESTIR" : "MORAR"} no lançamento em SBC. Pode me enviar as condições?`,
+  leadForm: (name, phone, intent, region, payment) => {
+    const intentStr = intent === "invest" ? "INVESTIR" : "MORAR";
+    const regionStr = region === "SBC" ? "Apenas SBC" : region === "ABC" ? "Todo o ABC" : "Santo André";
+    const payStr = payment === "standard" ? "Fluxo padrão" : "Parcela Baixa + Balão";
+    return `Oi! Meu nome é ${name || "[nome]"}. Quero ${intentStr} num lançamento.
+Busco na região: ${regionStr}.
+Preferência de pagamento: ${payStr}.
+Pode me enviar os valores e opções?`;
+  },
 };

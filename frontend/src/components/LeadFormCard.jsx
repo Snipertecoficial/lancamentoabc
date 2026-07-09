@@ -19,12 +19,14 @@ const LeadFormCard = ({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [intent, setIntent] = useState("live");
+  const [region, setRegion] = useState("SBC");
+  const [payment, setPayment] = useState("standard");
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const message = WA_MESSAGES.leadForm(name.trim(), phone.trim(), intent);
+    const message = WA_MESSAGES.leadForm(name.trim(), phone.trim(), intent, region, payment);
     openWhatsApp(message);
     setTimeout(() => setSubmitting(false), 800);
   };
@@ -65,7 +67,7 @@ const LeadFormCard = ({
 
         <div>
           <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">Meu interesse</label>
-          <div className="form-radio-group">
+          <div className="form-radio-group mb-3">
             <label className={`form-radio ${intent === "live" ? "active" : ""}`}>
               <input type="radio" name="intent" value="live" className="sr-only" onChange={() => setIntent("live")} data-testid={`${testid}-intent-live`} />
               Quero morar
@@ -74,6 +76,32 @@ const LeadFormCard = ({
               <input type="radio" name="intent" value="invest" className="sr-only" onChange={() => setIntent("invest")} data-testid={`${testid}-intent-invest`} />
               Quero investir
             </label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">Região</label>
+            <select
+              className="form-input text-sm px-2"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+            >
+              <option value="SBC">Apenas SBC</option>
+              <option value="ABC">Todo o ABC</option>
+              <option value="Santo André">Santo André</option>
+            </select>
+          </div>
+          <div>
+            <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">Parcelas</label>
+            <select
+              className="form-input text-sm px-2"
+              value={payment}
+              onChange={(e) => setPayment(e.target.value)}
+            >
+              <option value="standard">Padrão</option>
+              <option value="balloon">Baixa + Balão</option>
+            </select>
           </div>
         </div>
 
