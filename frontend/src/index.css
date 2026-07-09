@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #0A1930;
+    color: #F0F5FA;
+    overflow-x: hidden;
+}
+
+.font-display {
+    font-family: 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.01em;
+}
+
+.font-sans {
+    font-family: 'Inter', sans-serif;
+}
+
+@layer base {
+    :root {
+        /* Espontone brand palette — derived from logo (#3A70A3 blue + #8E8E8E grey) */
+        --navy-deep: #061224;
+        --navy-dark: #0A1930;
+        --navy: #12294A;
+        --navy-mid: #1E3F6A;
+        --blue-brand: #3A70A3;
+        --blue-light: #5B95CE;
+        --blue-glow: #7DB4E8;
+        --grey: #8E8E8E;
+        --grey-light: #B8BEC5;
+        --white: #FFFFFF;
+        --off-white: #F0F5FA;
+        --cream: #E8EEF5;
+
+        --background: 214 66% 11%;
+        --foreground: 210 40% 96%;
+        --card: 214 55% 17%;
+        --card-foreground: 210 40% 96%;
+        --popover: 214 55% 17%;
+        --popover-foreground: 210 40% 96%;
+        --primary: 210 47% 43%;
+        --primary-foreground: 214 66% 11%;
+        --secondary: 214 40% 22%;
+        --secondary-foreground: 210 40% 96%;
+        --muted: 214 40% 22%;
+        --muted-foreground: 214 12% 68%;
+        --accent: 210 47% 55%;
+        --accent-foreground: 214 66% 11%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 214 30% 28%;
+        --input: 214 30% 28%;
+        --ring: 210 47% 55%;
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    * { border-color: hsl(var(--border)); }
+    body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Playfair Display', Georgia, serif; }
+    ::selection { background: #3A70A3; color: #FFFFFF; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #061224; }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #5B95CE, #3A70A3); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #7DB4E8; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] { display: contents !important; }
+}
