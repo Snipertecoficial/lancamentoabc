@@ -3,19 +3,9 @@
         "frontend": {
             "root": "frontend",
             "framework": "create-react-app"
-        },
-        "backend": {
-            "root": "backend"
         }
     },
     "rewrites": [
-        {
-            "source": "/api(/.*)?",
-            "destination": {
-                "type": "service",
-                "service": "backend"
-            }
-        },
         {
             "source": "/(.*)",
             "destination": {
