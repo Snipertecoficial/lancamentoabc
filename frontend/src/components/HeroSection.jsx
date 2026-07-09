@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import { Bed, Car, Waves, Ruler, Sparkles, PlayCircle, MessageCircle, CalendarCheck } from "lucide-react";
 import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
 
@@ -10,23 +10,6 @@ const ATTRS = [
 ];
 
 const HeroSection = () => {
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.muted = false;
-    video.volume = 0.7;
-    const playPromise = video.play();
-
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        video.muted = true;
-        video.play().catch(() => {});
-      });
-    }
-  }, []);
 
   return (
     <section id="top" className="relative overflow-hidden" data-testid="hero-section">
@@ -96,19 +79,15 @@ const HeroSection = () => {
               <div className="device-mock-glow" aria-hidden="true" />
               <div className="device-mock-notch" />
               <div className="device-mock-screen">
-                <video
-                  ref={videoRef}
-                  poster="/tour-poster.jpg"
-                  loop
-                  playsInline
-                  controls
-                  preload="auto"
-                  className="w-full h-full object-contain"
+                <iframe
+                  className="w-full h-full object-cover"
+                  src="https://www.youtube.com/embed/MBYgQBK6XJc?autoplay=1&mute=1&loop=1&playlist=MBYgQBK6XJc&controls=0&playsinline=1&modestbranding=1&rel=0"
+                  title="Tour Virtual"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
                   data-testid="hero-video"
-                >
-                  <source src="/tour-video.mov" type="video/mp4" />
-                  Seu navegador não suporta vídeos HTML5.
-                </video>
+                ></iframe>
               </div>
             </div>
           </div>
