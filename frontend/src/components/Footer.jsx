@@ -14,7 +14,7 @@ const Footer = () => {
               Especialistas em conectar você ao imóvel certo no ABC Paulista.
             </p>
             <div className="flex items-center gap-2 text-xs text-[#F0F5FA]/50 uppercase tracking-widest font-sans font-semibold">
-              CRECI-J XX.XXX (a ajustar)
+              CRECI 042656-J
             </div>
           </div>
 

@@ -122,11 +122,14 @@ const Slider3D = () => {
 
   return (
     <section id="galeria3d" className="slider3d-section" ref={containerRef} data-testid="slider3d-section">
+      {/* Top Gradient for text legibility */}
+      <div className="absolute top-0 left-0 right-0 h-40 md:h-56 bg-gradient-to-b from-[#0A1930]/90 to-transparent z-[5] pointer-events-none" aria-hidden="true" />
+      
       {/* Section header (top) */}
-      <div className="absolute top-0 left-0 right-0 pt-20 md:pt-24 z-10 pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 pt-10 md:pt-20 z-10 pointer-events-none">
         <div className="container-lp text-center">
           <div className="section-eyebrow justify-center" style={{ display: "inline-flex" }}>Galeria imersiva</div>
-          <h2 className="section-title mt-3">Um passeio pelo <em>Landscape</em></h2>
+          <h2 className="section-title mt-3">Um passeio pelo <em>seu Futuro Lar</em></h2>
         </div>
       </div>
 
