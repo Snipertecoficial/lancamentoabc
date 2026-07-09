@@ -181,27 +181,27 @@ export const TESTIMONIALS = [
 
 export const FAQ_ITEMS = [
   {
-    q: "Quando será a entrega do Landscape?",
-    a: "A obra está em andamento (fase de fundação em Julho/2026). A previsão de entrega é divulgada em detalhe na tabela de vendas — fale com um corretor Espontone para receber a data oficial atualizada.",
+    q: "Onde comprar apartamento na planta no ABC Paulista?",
+    a: "O melhor lançamento atual fica em São Bernardo do Campo, a 2 minutos do Shopping Metrópole. O empreendimento oferece plantas de 60m² a 74m² com 2 ou 3 dormitórios, varanda gourmet e infraestrutura completa de lazer de resort.",
   },
   {
-    q: "Quais são as metragens disponíveis?",
-    a: "São 5 tipologias entre 60m² e 74,82m², todas com varanda: 2 ou 3 dormitórios (com 1 suíte), 1 ou 2 vagas na garagem.",
+    q: "Qual o valor do apartamento na planta em São Bernardo do Campo?",
+    a: "Durante a oferta por tempo limitado de lançamento, as parcelas mensais começam em R$ 3.900 para as unidades compactas premium de 60m², e vão até R$ 5.200 para as plantas de 74m². Também aceitamos planos com entrada facilitada e parcela balão.",
   },
   {
-    q: "Posso personalizar acabamentos comprando na planta?",
-    a: "Sim. Uma das grandes vantagens de comprar na planta é escolher acabamentos dentro do padrão do empreendimento, valorizando ainda mais o apartamento antes da entrega.",
+    q: "Quando será a entrega do lançamento em São Bernardo do Campo?",
+    a: "A entrega deste empreendimento está prevista e garantida para ocorrer em 3 anos. A obra já está em andamento (fase de projetos e terraplenagem em 2026). Fale com um corretor para receber a tabela oficial de obras.",
   },
   {
-    q: "O empreendimento fica em uma boa região para investir?",
-    a: "Sim. A Av. Pereira Barreto é uma das localizações mais valorizadas de Santo André. A cidade lidera valorização no ABC em 2026, impulsionada pela extensão da Linha 20-Rosa do Metrô e a chegada do BRT-ABC.",
+    q: "O centro de São Bernardo do Campo é uma boa região para investir em imóveis?",
+    a: "Sim, é uma das regiões com maior potencial de valorização no ABC Paulista em 2026. A proximidade com o Shopping Metrópole e a chegada do futuro BRT-ABC atraem forte demanda por aluguel e revenda.",
   },
   {
-    q: "Como funciona o parcelamento durante a obra?",
-    a: "O parcelamento é feito durante a construção com condições diferenciadas de lançamento. Um corretor Espontone monta uma simulação sob medida para o seu perfil no WhatsApp.",
+    q: "Como funciona o financiamento de apartamento na planta?",
+    a: "O parcelamento da entrada é feito diretamente com a construtora durante o período de obras (3 anos) com condições flexíveis. O saldo devedor pode ser financiado pelo banco apenas na entrega das chaves.",
   },
   {
-    q: "Vocês têm outros lançamentos no ABC?",
-    a: "Sim. A Espontone é especialista no ABC Paulista e possui um portfólio exclusivo de lançamentos. Fale com nosso time e conhecemos opções que combinam com o seu momento.",
+    q: "Quais são os itens de lazer e infraestrutura do condomínio?",
+    a: "O projeto conta com mais de 30 espaços de lazer, divididos em 5 categorias: Piscinas (incluindo coberta e aquecida), Fitness e Esportes (Academia, Crossfit, Beach Tennis), Gastronomia (Salão de Festas, Gourmet), Espaços Kids, e Coworking completo.",
   },
 ];
