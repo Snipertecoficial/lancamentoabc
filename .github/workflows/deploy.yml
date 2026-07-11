@@ -1,0 +1,43 @@
+name: Deploy via FTP para o subdominio (Hostgator)
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar o repositorio
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Instalar dependencias
+        working-directory: frontend
+        run: npm install
+
+      - name: Build do projeto
+        working-directory: frontend
+        run: npm run build
+
+      - name: Mostrar arquivos gerados
+        working-directory: frontend
+        run: ls -al build/
+
+      - name: Deploy FTP para o subdominio
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          port: 21
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          local-dir: frontend/build/
+          server-dir: /lancamento.espontone.com.br/
+          dangerous-clean-slate: false
+          dry-run: false
+          log-level: verbose
