@@ -34,7 +34,7 @@ const Testimonials = () => {
                   </div>
                   <div>
                     <div className="font-sans font-semibold text-sm text-[#F5F2ED]">{t.name}</div>
-                    <div className="font-sans text-xs text-[#F5F2ED]/50">Avaliação no Google</div>
+                    <div className="font-sans text-xs text-[#]/75">Avaliação no Google</div>
                   </div>
                 </div>
               </div>

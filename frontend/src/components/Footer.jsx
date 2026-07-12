@@ -10,10 +10,10 @@ const Footer = () => {
         <div className="grid md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">
             <div className="mb-4"><EspontoneLogo /></div>
-            <p className="font-sans text-sm text-[#F0F5FA]/60 leading-relaxed mb-4 max-w-md">
+            <p className="font-sans text-sm text-[#]/75 leading-relaxed mb-4 max-w-md">
               Especialistas em conectar você ao imóvel certo no ABC Paulista.
             </p>
-            <div className="flex items-center gap-2 text-xs text-[#F0F5FA]/50 uppercase tracking-widest font-sans font-semibold">
+            <div className="flex items-center gap-2 text-xs text-[#]/75 uppercase tracking-widest font-sans font-semibold">
               CRECI 042656-J
             </div>
           </div>
@@ -53,7 +53,7 @@ const Footer = () => {
             © {new Date().getFullYear()} Espontone Imóveis. Todos os direitos reservados.
           </div>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-4 text-[#F0F5FA]/60">
+            <div className="flex items-center gap-4 text-[#]/75">
               <a href="https://www.instagram.com/espontone.lancamentos/" target="_blank" rel="noreferrer" className="hover:text-[#7DB4E8] transition-colors" aria-label="Instagram">
                 <Instagram size={18} />
               </a>

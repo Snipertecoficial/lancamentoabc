@@ -40,8 +40,9 @@ const LeadFormCard = ({
 
       <div className="space-y-3">
         <div>
-          <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">Nome completo</label>
+          <label htmlFor={`${testid}-name`} className="font-sans text-xs uppercase tracking-widest text-[#]/75 mb-1 block">Nome completo</label>
           <input
+            id={`${testid}-name`}
             className="form-input"
             type="text"
             placeholder="Como podemos te chamar?"
@@ -53,8 +54,9 @@ const LeadFormCard = ({
         </div>
 
         <div>
-          <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">WhatsApp</label>
+          <label htmlFor={`${testid}-phone`} className="font-sans text-xs uppercase tracking-widest text-[#]/75 mb-1 block">WhatsApp</label>
           <input
+            id={`${testid}-phone`}
             className="form-input"
             type="tel"
             placeholder="(11) 99999-9999"
@@ -66,7 +68,7 @@ const LeadFormCard = ({
         </div>
 
         <div>
-          <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">Meu interesse</label>
+          <label className="font-sans text-xs uppercase tracking-widest text-[#]/75 mb-1 block">Meu interesse</label>
           <div className="form-radio-group mb-3">
             <label className={`form-radio ${intent === "live" ? "active" : ""}`}>
               <input type="radio" name="intent" value="live" className="sr-only" onChange={() => setIntent("live")} data-testid={`${testid}-intent-live`} />
@@ -81,8 +83,9 @@ const LeadFormCard = ({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">Região</label>
+            <label htmlFor={`${testid}-region`} className="font-sans text-xs uppercase tracking-widest text-[#]/75 mb-1 block">Região</label>
             <select
+              id={`${testid}-region`}
               className="form-input text-sm px-2"
               value={region}
               onChange={(e) => setRegion(e.target.value)}
@@ -93,8 +96,9 @@ const LeadFormCard = ({
             </select>
           </div>
           <div>
-            <label className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mb-1 block">Parcelas</label>
+            <label htmlFor={`${testid}-payment`} className="font-sans text-xs uppercase tracking-widest text-[#]/75 mb-1 block">Parcelas</label>
             <select
+              id={`${testid}-payment`}
               className="form-input text-sm px-2"
               value={payment}
               onChange={(e) => setPayment(e.target.value)}
@@ -109,7 +113,7 @@ const LeadFormCard = ({
           <Send size={16} /> {submitting ? "Abrindo WhatsApp..." : cta}
         </button>
 
-        <p className="text-xs text-[#F5F2ED]/50 text-center font-sans leading-relaxed pt-1">
+        <p className="text-xs text-[#]/75 text-center font-sans leading-relaxed pt-1">
           {subtitle}
         </p>
       </div>

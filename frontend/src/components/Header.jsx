@@ -70,7 +70,7 @@ const Header = () => {
           className={`absolute top-0 right-0 bottom-0 w-64 max-w-[80vw] bg-[#0A1930] border-l border-[#C8A45D]/20 shadow-2xl transition-transform duration-300 ease-out flex flex-col ${open ? "translate-x-0" : "translate-x-full"}`}
         >
           <div className="flex items-center justify-end p-4 h-16 md:h-20 border-b border-[#F5F2ED]/10">
-            <button className="text-[#F0F5FA] p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors" onClick={() => setOpen(false)}>
+            <button className="text-[#F0F5FA] p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors" onClick={() => setOpen(false)} aria-label="Fechar menu">
               <X size={20} />
             </button>
           </div>

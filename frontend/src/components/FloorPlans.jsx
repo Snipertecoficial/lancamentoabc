@@ -29,7 +29,7 @@ const FloorPlans = () => {
                 )}
                 <Home className="text-[#D9BB78] mb-4" size={26} />
                 <div className="font-display text-4xl md:text-5xl text-gold-grad leading-none">{plan.area}</div>
-                <div className="font-sans text-sm uppercase tracking-widest text-[#F5F2ED]/50 mt-1 mb-5">{plan.label}</div>
+                <div className="font-sans text-sm uppercase tracking-widest text-[#]/75 mt-1 mb-5">{plan.label}</div>
                 <div className="flex items-start gap-2 mb-2 text-[#F5F2ED]/90">
                   <BedDouble size={18} className="text-[#D9BB78] mt-0.5 shrink-0" />
                   <span className="font-sans text-sm md:text-base">{plan.dorms}</span>
@@ -51,7 +51,7 @@ const FloorPlans = () => {
         </div>
 
         <div className="text-center mt-10">
-          <p className="font-sans text-sm text-[#F5F2ED]/50 italic">
+          <p className="font-sans text-sm text-[#]/75 italic">
             * As metragens e configurações finais são confirmadas na tabela oficial de vendas.
           </p>
         </div>

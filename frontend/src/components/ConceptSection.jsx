@@ -21,15 +21,15 @@ const ConceptSection = () => {
           <div className="grid grid-cols-3 gap-4 max-w-md">
             <div className="text-center">
               <div className="font-display text-3xl md:text-4xl text-gold-grad">+40</div>
-              <div className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mt-1">Espaços de lazer</div>
+              <div className="font-sans text-xs uppercase tracking-widest text-[#]/75 mt-1">Espaços de lazer</div>
             </div>
             <div className="text-center">
               <div className="font-display text-3xl md:text-4xl text-gold-grad">5</div>
-              <div className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mt-1">Tipologias</div>
+              <div className="font-sans text-xs uppercase tracking-widest text-[#]/75 mt-1">Tipologias</div>
             </div>
             <div className="text-center">
               <div className="font-display text-3xl md:text-4xl text-gold-grad">100%</div>
-              <div className="font-sans text-xs uppercase tracking-widest text-[#F5F2ED]/60 mt-1">Suíte inclusa</div>
+              <div className="font-sans text-xs uppercase tracking-widest text-[#]/75 mt-1">Suíte inclusa</div>
             </div>
           </div>
         </Reveal>

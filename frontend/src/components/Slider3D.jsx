@@ -167,7 +167,7 @@ const Slider3D = () => {
             <img
               src={slide.url}
               alt={slide.title}
-              loading={Math.abs(i - index) <= 1 ? "eager" : "lazy"}
+              loading="lazy"
               onError={(e) => { e.currentTarget.style.background = "linear-gradient(135deg,#12294A,#061224)"; }}
             />
             <div className="slider3d-caption">

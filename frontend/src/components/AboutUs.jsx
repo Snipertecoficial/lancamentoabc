@@ -36,7 +36,7 @@ const AboutUs = () => {
             {NUMBERS.map((n) => (
               <div key={n.label} className="text-center premium-card p-5 md:p-6">
                 <div className="font-display text-3xl md:text-5xl text-gold-grad leading-none">{n.value}</div>
-                <div className="font-sans text-xs md:text-sm uppercase tracking-widest text-[#F5F2ED]/60 mt-2">{n.label}</div>
+                <div className="font-sans text-xs md:text-sm uppercase tracking-widest text-[#]/75 mt-2">{n.label}</div>
               </div>
             ))}
           </div>
@@ -57,7 +57,7 @@ const AboutUs = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <p className="font-sans text-sm text-[#F5F2ED]/50 italic max-w-2xl mx-auto">
+          <p className="font-sans text-sm text-[#]/75 italic max-w-2xl mx-auto">
             <Sparkles className="inline text-[#D9BB78] mr-1" size={14} /> Números ilustrativos — ajustar para os dados oficiais da Espontone antes da publicação.
           </p>
         </div>

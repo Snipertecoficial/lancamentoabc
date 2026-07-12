@@ -36,7 +36,7 @@ const FinalForm = () => {
                 <span className="text-sm md:text-base text-[#F5F2ED]/80">Mensais a partir de <strong className="text-white">R$ 5.200</strong></span>
               </li>
             </ul>
-            <p className="text-sm text-[#F5F2ED]/60 italic">
+            <p className="text-sm text-[#]/75 italic">
               * Prefere uma parcela mais baixa? Aceitamos entrada facilitada e parcela balão.
             </p>
           </Reveal>

@@ -44,7 +44,7 @@ const HeroSection = () => {
                 <div key={i} className="premium-card p-3 md:p-4 text-center" data-testid={`hero-attr-${i}`}>
                   <a.icon className="mx-auto text-[#7DB4E8] mb-2" size={22} />
                   <div className="font-display text-sm md:text-base text-[#F0F5FA] leading-tight">{a.label}</div>
-                  <div className="font-sans text-[0.68rem] uppercase tracking-widest text-[#F0F5FA]/50 mt-1">{a.sub}</div>
+                  <div className="font-sans text-[0.68rem] uppercase tracking-widest text-[#]/75 mt-1">{a.sub}</div>
                 </div>
               ))}
             </div>
@@ -84,6 +84,7 @@ const HeroSection = () => {
                   src="https://www.youtube.com/embed/MBYgQBK6XJc?autoplay=1&mute=1&loop=1&playlist=MBYgQBK6XJc&controls=1&playsinline=1&modestbranding=1&rel=0"
                   title="Tour Virtual"
                   frameBorder="0"
+                  loading="lazy"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                   data-testid="hero-video"
@@ -99,7 +100,7 @@ const HeroSection = () => {
                 <p className="font-display text-lg md:text-xl text-[#F0F5FA] leading-tight mb-1">
                   Gostou do que viu?
                 </p>
-                <p className="font-sans text-sm text-[#F0F5FA]/60 leading-snug">
+                <p className="font-sans text-sm text-[#]/75 leading-snug">
                   Agende uma visita ao plantão ou fale direto com um corretor especialista.
                 </p>
               </div>
