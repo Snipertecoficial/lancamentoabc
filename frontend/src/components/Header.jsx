@@ -22,40 +22,42 @@ const Header = () => {
   }, []);
 
   return (
-    <header className={`site-header ${scrolled ? "scrolled" : ""}`} data-testid="site-header">
-      <div className="container-lp flex items-center justify-between h-16 md:h-20">
-        <a href="#top" data-testid="brand-logo" className="flex items-center gap-3">
-          <EspontoneLogo />
-        </a>
+    <>
+      <header className={`site-header ${scrolled ? "scrolled" : ""}`} data-testid="site-header">
+        <div className="container-lp flex items-center justify-between h-16 md:h-20">
+          <a href="#top" data-testid="brand-logo" className="flex items-center gap-3">
+            <EspontoneLogo />
+          </a>
 
-        <nav className="hidden lg:flex items-center gap-8">
-          {NAV.map((item) => (
-            <a key={item.href} href={item.href}
-              className="font-sans text-sm text-[#F0F5FA]/75 hover:text-[#7DB4E8] transition-colors"
-              data-testid={`nav-${item.href.slice(1)}`}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
+          <nav className="hidden lg:flex items-center gap-8">
+            {NAV.map((item) => (
+              <a key={item.href} href={item.href}
+                className="font-sans text-sm text-[#F0F5FA]/75 hover:text-[#7DB4E8] transition-colors"
+                data-testid={`nav-${item.href.slice(1)}`}>
+                {item.label}
+              </a>
+            ))}
+          </nav>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden lg:block">
-            <button className="btn-gold"
-              onClick={() => openWhatsApp(WA_MESSAGES.hero)}
-              data-testid="header-cta-whatsapp">
-              <MessageCircle size={16} /> Fale com corretor
+          <div className="flex items-center gap-3">
+            <div className="hidden lg:block">
+              <button className="btn-gold"
+                onClick={() => openWhatsApp(WA_MESSAGES.hero)}
+                data-testid="header-cta-whatsapp">
+                <MessageCircle size={16} /> Fale com corretor
+              </button>
+            </div>
+            <button className="lg:hidden text-[#F0F5FA] p-2" onClick={() => setOpen((v) => !v)}
+              aria-label="Menu" data-testid="mobile-menu-toggle">
+              {open ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
-          <button className="lg:hidden text-[#F0F5FA] p-2" onClick={() => setOpen((v) => !v)}
-            aria-label="Menu" data-testid="mobile-menu-toggle">
-            {open ? <X size={22} /> : <Menu size={22} />}
-          </button>
         </div>
-      </div>
+      </header>
 
       {/* Mobile Menu Drawer */}
       <div 
-        className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 z-[10000] lg:hidden transition-opacity duration-300 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
       >
         {/* Backdrop */}
         <div 
@@ -92,7 +94,7 @@ const Header = () => {
           </div>
         </div>
       </div>
-    </header>
+    </>
   );
 };
 

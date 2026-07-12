@@ -1,6 +1,6 @@
 import React from "react";
 import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
-import { Instagram, Mail, MapPin, MessageCircle } from "lucide-react";
+import { Instagram, Mail, MapPin, MessageCircle, Youtube } from "lucide-react";
 import EspontoneLogo from "@/components/EspontoneLogo";
 
 const Footer = () => {
@@ -25,14 +25,13 @@ const Footer = () => {
                 <button onClick={() => openWhatsApp(WA_MESSAGES.general)}
                   className="flex items-center gap-2 hover:text-[#7DB4E8] transition-colors"
                   data-testid="footer-whatsapp">
-                  <MessageCircle size={14} /> WhatsApp
+                  <MessageCircle size={14} /> (11) 91049-4333
                 </button>
               </li>
               <li className="flex items-center gap-2"><Mail size={14} /> contato@espontone.com.br</li>
-              <li className="flex items-center gap-2"><Instagram size={14} /> @espontone.lancamentos</li>
-              <li className="flex items-start gap-2">
-                <MapPin size={14} className="mt-1" />
-                <span>Plantão de vendas<br />Av. Pereira Barreto, 1981<br />Santo André / SP</span>
+              <li className="flex items-start gap-2 pt-1">
+                <MapPin size={14} className="mt-1 shrink-0" />
+                <span>Nossa Imobiliária:<br />Rua das Caneleiras, 778 - Jardim</span>
               </li>
             </ul>
           </div>
@@ -53,8 +52,17 @@ const Footer = () => {
           <div className="font-sans text-xs text-[#F0F5FA]/40">
             © {new Date().getFullYear()} Espontone Imóveis. Todos os direitos reservados.
           </div>
-          <div className="flex items-center gap-4 font-sans text-xs text-[#F0F5FA]/40">
-            <a href="#" className="hover:text-[#7DB4E8] transition-colors">Política de Privacidade</a>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 text-[#F0F5FA]/60">
+              <a href="https://www.instagram.com/espontone.lancamentos/" target="_blank" rel="noreferrer" className="hover:text-[#7DB4E8] transition-colors" aria-label="Instagram">
+                <Instagram size={18} />
+              </a>
+              <a href="https://www.youtube.com/@espontonelancamentos6728" target="_blank" rel="noreferrer" className="hover:text-[#7DB4E8] transition-colors" aria-label="YouTube">
+                <Youtube size={19} />
+              </a>
+            </div>
+            <div className="hidden md:block w-px h-4 bg-[#F0F5FA]/20"></div>
+            <a href="#" className="font-sans text-xs text-[#F0F5FA]/40 hover:text-[#7DB4E8] transition-colors">Política de Privacidade</a>
           </div>
         </div>
       </div>
