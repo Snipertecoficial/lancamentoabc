@@ -2,8 +2,7 @@
 // User will provide phone number later. For now we use the click-to-chat
 // endpoint without number so it opens the WhatsApp chooser.
 
-const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || ""; // Ex: 5511999999999
-
+const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || "5511910494333"; // Ex: 5511999999999
 export function buildWhatsAppUrl(message = "") {
   const encoded = encodeURIComponent(message);
   if (WHATSAPP_PHONE && WHATSAPP_PHONE.length > 0) {
