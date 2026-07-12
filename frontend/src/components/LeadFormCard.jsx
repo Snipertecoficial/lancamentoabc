@@ -27,6 +27,40 @@ const LeadFormCard = ({
         new window.RDStationForms('espontone-16aa058dd608303c1ceb', 'null').createForm();
       }
     }
+
+    // Force redirection if RD Station's own redirect fails or is delayed.
+    // RD Station dispatches a postMessage on successful conversion.
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'RDSTATION_FORM_CONVERSION') {
+        window.location.href = '/obrigado';
+      }
+    };
+    window.addEventListener("message", handleMessage);
+
+    // Fallback Observer: If RD Station form converts to a success message (pop-up/text inside the div)
+    const observer = new MutationObserver((mutations) => {
+      const container = document.getElementById("espontone-16aa058dd608303c1ceb");
+      if (container) {
+        const text = container.innerText.toLowerCase();
+        // RD station standard success texts
+        if (text.includes("sucesso") || text.includes("obrigado") || text.includes("agradecemos")) {
+          // ensure the form is gone
+          if (!container.querySelector("form")) {
+            window.location.href = '/obrigado';
+          }
+        }
+      }
+    });
+
+    const rdSection = document.getElementById("rd-form-section");
+    if (rdSection) {
+      observer.observe(rdSection, { childList: true, subtree: true });
+    }
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      observer.disconnect();
+    };
   }, []);
 
   return (
