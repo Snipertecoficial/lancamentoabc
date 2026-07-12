@@ -25,6 +25,7 @@ const LeadFormCard = ({
         const container = document.getElementById("espontone-16aa058dd608303c1ceb");
         if (container) container.innerHTML = "";
         new window.RDStationForms('espontone-16aa058dd608303c1ceb', 'null').createForm();
+      }
     }
   }, []);
 
