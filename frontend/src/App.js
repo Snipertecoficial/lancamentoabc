@@ -11,10 +11,11 @@ const FAQ = lazy(() => import("@/components/FAQ"));
 const FinalForm = lazy(() => import("@/components/FinalForm"));
 const Slider3D = lazy(() => import("@/components/Slider3D"));
 const Footer = lazy(() => import("@/components/Footer"));
-const FloatingWhatsApp = lazy(() => import("@/components/FloatingWhatsApp"));
+
 const CookieConsent = lazy(() => import("@/components/CookieConsent"));
 const ScrollProgress = lazy(() => import("@/components/ScrollProgress"));
 const LLMContext = lazy(() => import("@/components/LLMContext"));
+const ThankYou = lazy(() => import("@/components/ThankYou"));
 
 const Home = () => {
   useEffect(() => {
@@ -48,7 +49,6 @@ const Home = () => {
       <Suspense fallback={null}>
         <Footer />
         <LLMContext />
-        <FloatingWhatsApp />
         <CookieConsent />
       </Suspense>
     </div>
@@ -59,9 +59,12 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-        </Routes>
+        <Suspense fallback={<div className="min-h-screen bg-[#0A1930]" />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/obrigado" element={<ThankYou />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </div>
   );

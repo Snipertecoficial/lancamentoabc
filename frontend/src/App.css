@@ -494,3 +494,12 @@
 }
 
 [data-debug-wrapper="true"] { display: contents !important; }
+
+/* RD Station custom form overrides */
+.rd-custom-form form {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.rd-custom-form input, .rd-custom-form select {
+  font-family: inherit !important;
+}

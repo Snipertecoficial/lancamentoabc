@@ -14,8 +14,22 @@ export function buildWhatsAppUrl(message = "") {
 }
 
 export function openWhatsApp(message = "") {
-  const url = buildWhatsAppUrl(message);
-  window.open(url, "_blank", "noopener,noreferrer");
+  // Now redirects to the RD Station form section
+  const formSection = document.getElementById("rd-form-section");
+  if (formSection) {
+    formSection.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Focus the form container if possible to draw attention
+    const rdContainer = document.getElementById("espontone-16aa058dd608303c1ceb");
+    if (rdContainer) {
+      rdContainer.classList.add("ring-4", "ring-[#C8A45D]", "ring-opacity-50", "rounded-lg", "transition-all", "duration-500");
+      setTimeout(() => {
+        rdContainer.classList.remove("ring-4", "ring-[#C8A45D]", "ring-opacity-50");
+      }, 1500);
+    }
+  } else {
+    // Fallback if not found (e.g. on other pages)
+    window.location.href = "/#contato";
+  }
 }
 
 export const WA_MESSAGES = {
