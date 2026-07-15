@@ -5,7 +5,7 @@ import EspontoneLogo from "@/components/EspontoneLogo";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 const ThankYou = () => {
-  const waUrl = buildWhatsAppUrl("Olá! Preenchi o formulário no site e gostaria de falar com um corretor sobre o lançamento.");
+  const waUrl = buildWhatsAppUrl("Olá! Preenchi o formulário no site e gostaria de falar com um corretor sobre o lançamento.", "5511947723347");
 
   useEffect(() => {
     window.scrollTo(0, 0);

@@ -3,10 +3,11 @@
 // endpoint without number so it opens the WhatsApp chooser.
 
 const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || "5511910494333"; // Ex: 5511999999999
-export function buildWhatsAppUrl(message = "") {
+export function buildWhatsAppUrl(message = "", customPhone = null) {
   const encoded = encodeURIComponent(message);
-  if (WHATSAPP_PHONE && WHATSAPP_PHONE.length > 0) {
-    return `https://api.whatsapp.com/send?phone=${WHATSAPP_PHONE}&text=${encoded}`;
+  const phoneToUse = customPhone || WHATSAPP_PHONE;
+  if (phoneToUse && phoneToUse.length > 0) {
+    return `https://api.whatsapp.com/send?phone=${phoneToUse}&text=${encoded}`;
   }
   // Opens WhatsApp with the message but no fixed recipient (chat picker).
   return `https://api.whatsapp.com/send?text=${encoded}`;
