@@ -39,8 +39,6 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-lg text-[#F0F5FA] mb-4">Navegação</h4>
             <ul className="space-y-2 font-sans text-sm text-[#F0F5FA]/70">
-              <li><a href="#plantas" className="hover:text-[#7DB4E8] transition-colors">Plantas</a></li>
-              <li><a href="#localizacao" className="hover:text-[#7DB4E8] transition-colors">Localização</a></li>
               <li><a href="#faq" className="hover:text-[#7DB4E8] transition-colors">Dúvidas</a></li>
               <li><a href="#contato" className="hover:text-[#7DB4E8] transition-colors">Contato</a></li>
               <li><a href="#galeria3d" className="hover:text-[#7DB4E8] transition-colors">Galeria imersiva</a></li>

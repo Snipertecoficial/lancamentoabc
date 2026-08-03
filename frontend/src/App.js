@@ -5,8 +5,6 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 
 // Lazy loaded components (below the fold)
-const FloorPlans = lazy(() => import("@/components/FloorPlans"));
-const LocationSection = lazy(() => import("@/components/LocationSection"));
 const FAQ = lazy(() => import("@/components/FAQ"));
 const FinalForm = lazy(() => import("@/components/FinalForm"));
 const Slider3D = lazy(() => import("@/components/Slider3D"));
@@ -33,10 +31,6 @@ const Home = () => {
         <HeroSection />
         
         <Suspense fallback={<div className="h-32" />}>
-          {/* 4. Floor plans */}
-          <FloorPlans />
-          {/* 6. Location */}
-          <LocationSection />
           {/* 10. FAQ */}
           <FAQ />
           {/* 11. Final form — PENULTIMATE section */}

@@ -4,8 +4,6 @@ import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
 import EspontoneLogo from "@/components/EspontoneLogo";
 
 const NAV = [
-  { label: "Plantas", href: "#plantas" },
-  { label: "Localização", href: "#localizacao" },
   { label: "Dúvidas", href: "#faq" },
   { label: "Contato", href: "#contato" },
 ];

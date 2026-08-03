@@ -3,7 +3,7 @@ import { Bed, Car, Waves, Ruler, Sparkles, PlayCircle, MessageCircle, CalendarCh
 import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
 
 const ATTRS = [
-  { icon: Ruler, label: "60 a 75m²", sub: "c/ varanda" },
+  { icon: Sparkles, label: "Varanda Gourmet", sub: "Lançamento SBC" },
   { icon: Bed, label: "2 ou 3 dorms", sub: "c/ suíte" },
   { icon: Car, label: "1 ou 2 vagas", sub: "garagem" },
   { icon: Waves, label: "+40 espaços", sub: "lazer resort" },
@@ -54,8 +54,8 @@ const HeroSection = () => {
               <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.hero)} data-testid="hero-cta-whatsapp">
                 <PlayCircle size={16} /> Quero condições exclusivas
               </button>
-              <a href="#plantas" className="btn-outline-gold" data-testid="hero-cta-plants">
-                Ver plantas
+              <a href="#contato" className="btn-outline-gold" data-testid="hero-cta-unit">
+                Garanta sua unidade
               </a>
             </div>
 
