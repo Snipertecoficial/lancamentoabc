@@ -1,6 +1,20 @@
 <!doctype html>
 <html lang="pt-BR">
     <head>
+        <!-- Google Consent Mode v2: default before GTM loads -->
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          var savedConsent = localStorage.getItem('lgpd-consent');
+          var hasConsent = savedConsent === 'granted' || savedConsent === 'true';
+          gtag('consent', 'default', {
+            analytics_storage: hasConsent ? 'granted' : 'denied',
+            ad_storage: hasConsent ? 'granted' : 'denied',
+            ad_user_data: hasConsent ? 'granted' : 'denied',
+            ad_personalization: hasConsent ? 'granted' : 'denied',
+            wait_for_update: 500
+          });
+        </script>
         <!-- Google Tag Manager -->
         <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
         new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
