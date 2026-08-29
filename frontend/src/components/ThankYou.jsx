@@ -6,10 +6,7 @@ import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { trackLeadConversion, trackWhatsAppClick } from "@/lib/tracking";
 
 const ThankYou = () => {
-  // TODO(cliente): este número (5511947723347) é diferente do padrão usado
-  // no resto do site (5511910494333, em src/lib/whatsapp.js). Confirmar qual
-  // é o correto antes de unificar.
-  const waUrl = buildWhatsAppUrl("Olá! Preenchi o formulário no site e gostaria de falar com um corretor sobre o lançamento.", "5511947723347");
+  const waUrl = buildWhatsAppUrl("Olá! Preenchi o formulário no site e gostaria de falar com um corretor sobre o lançamento.");
 
   useEffect(() => {
     window.scrollTo(0, 0);

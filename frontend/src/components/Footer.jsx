@@ -25,7 +25,7 @@ const Footer = () => {
                 <button onClick={() => openWhatsApp(WA_MESSAGES.general, "footer")}
                   className="flex items-center gap-2 hover:text-[#7DB4E8] transition-colors"
                   data-testid="footer-whatsapp">
-                  <MessageCircle size={14} /> (11) 91049-4333
+                  <MessageCircle size={14} /> (11) 94772-3347
                 </button>
               </li>
               <li className="flex items-center gap-2"><Mail size={14} /> contato@espontone.com.br</li>
