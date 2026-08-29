@@ -6,18 +6,31 @@ import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { trackLeadConversion, trackWhatsAppClick } from "@/lib/tracking";
 
 const ThankYou = () => {
+  // TODO(cliente): este número (5511947723347) é diferente do padrão usado
+  // no resto do site (5511910494333, em src/lib/whatsapp.js). Confirmar qual
+  // é o correto antes de unificar.
   const waUrl = buildWhatsAppUrl("Olá! Preenchi o formulário no site e gostaria de falar com um corretor sobre o lançamento.", "5511947723347");
 
   useEffect(() => {
     window.scrollTo(0, 0);
     trackLeadConversion();
-    // Give GTM enough time to dispatch GA4 and Google Ads before leaving the page.
+    // Give GTM up to 5s to dispatch GA4 and Google Ads before leaving the page.
     const timer = setTimeout(() => {
-      trackWhatsAppClick("thank_you_auto_redirect");
-      window.location.href = waUrl;
+      trackWhatsAppClick("thank_you_auto_redirect", {
+        onComplete: () => { window.location.href = waUrl; },
+      });
     }, 5000);
     return () => clearTimeout(timer);
   }, [waUrl]);
+
+  const goToWhatsApp = (e) => {
+    // Let modifier/middle clicks open a new tab natively — only intercept a plain click.
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    trackWhatsAppClick("thank_you_page", {
+      onComplete: () => { window.location.href = waUrl; },
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#0A1930] flex flex-col justify-between">
@@ -40,7 +53,7 @@ const ThankYou = () => {
           <p className="font-sans text-[#F0F5FA]/75 text-lg leading-relaxed mb-8">
             Você está sendo redirecionado para o WhatsApp de um dos nossos corretores especialistas para receber o material.
           </p>
-          <a href={waUrl} onClick={() => trackWhatsAppClick("thank_you_page")} className="btn-gold justify-center w-full py-4 text-base !bg-[#25D366] !text-white hover:!bg-[#20bd5a] !border-none flex items-center gap-2">
+          <a href={waUrl} onClick={goToWhatsApp} className="btn-gold justify-center w-full py-4 text-base !bg-[#25D366] !text-white hover:!bg-[#20bd5a] !border-none flex items-center gap-2">
             <MessageCircle size={20} />
             Ir para o WhatsApp agora
           </a>

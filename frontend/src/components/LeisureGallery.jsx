@@ -64,7 +64,7 @@ const LeisureGallery = () => {
         </div>
 
         <div className="text-center mt-12">
-          <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.visit)} data-testid="leisure-cta">
+          <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.visit, "leisure_cta")} data-testid="leisure-cta">
             Ver plantas disponíveis
           </button>
         </div>

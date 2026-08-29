@@ -28,7 +28,7 @@ const IPhoneMock = () => {
               <li className="flex items-start gap-3"><span className="text-[#D9BB78] font-bold">→</span> Vista dos apartamentos, lazer e fachada</li>
               <li className="flex items-start gap-3"><span className="text-[#D9BB78] font-bold">→</span> Perfeito para decidir com sua família</li>
             </ul>
-            <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.visit)} data-testid="iphone-cta-visit">
+            <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.visit, "iphone_cta_visit")} data-testid="iphone-cta-visit">
               <Calendar size={16} /> Agendar visita ao decorado
             </button>
           </Reveal>

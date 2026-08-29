@@ -58,7 +58,7 @@ const LocationSection = () => {
         </div>
 
         <div className="text-center mt-12">
-          <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.live)} data-testid="location-cta">
+          <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.live, "location_cta")} data-testid="location-cta">
             Quero morar aqui
           </button>
         </div>

@@ -1,6 +1,7 @@
 // Central helper for WhatsApp CTAs.
 // User will provide phone number later. For now we use the click-to-chat
 // endpoint without number so it opens the WhatsApp chooser.
+import { trackWhatsAppClick } from "@/lib/tracking";
 
 const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || "5511910494333"; // Ex: 5511999999999
 export function buildWhatsAppUrl(message = "", customPhone = null) {
@@ -13,7 +14,9 @@ export function buildWhatsAppUrl(message = "", customPhone = null) {
   return `https://api.whatsapp.com/send?text=${encoded}`;
 }
 
-export function openWhatsApp(message = "") {
+export function openWhatsApp(message = "", location = "site") {
+  trackWhatsAppClick(location);
+
   // Now redirects to the RD Station form section
   const formSection = document.getElementById("rd-form-section");
   if (formSection) {

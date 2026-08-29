@@ -40,7 +40,7 @@ const Header = () => {
           <div className="flex items-center gap-3">
             <div className="hidden lg:block">
               <button className="btn-gold"
-                onClick={() => openWhatsApp(WA_MESSAGES.hero)}
+                onClick={() => openWhatsApp(WA_MESSAGES.hero, "header_desktop")}
                 data-testid="header-cta-whatsapp">
                 <MessageCircle size={16} /> Fale com corretor
               </button>
@@ -86,7 +86,7 @@ const Header = () => {
 
           <div className="p-6 border-t border-[#F5F2ED]/10">
             <button className="btn-gold w-full justify-center py-4"
-              onClick={() => { setOpen(false); openWhatsApp(WA_MESSAGES.hero); }}>
+              onClick={() => { setOpen(false); openWhatsApp(WA_MESSAGES.hero, "header_mobile"); }}>
               <MessageCircle size={18} className="mr-2" /> Fale com corretor
             </button>
           </div>

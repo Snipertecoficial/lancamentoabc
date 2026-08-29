@@ -39,7 +39,7 @@ const FloorPlans = () => {
                 <div className="mt-auto">
                   <button
                     className="btn-outline-gold w-full justify-center"
-                    onClick={() => openWhatsApp(WA_MESSAGES.plant(plan.area, plan.dorms))}
+                    onClick={() => openWhatsApp(WA_MESSAGES.plant(plan.area, plan.dorms), `floorplans_${plan.area}`)}
                     data-testid={`plan-cta-${plan.id}`}
                   >
                     Quero esta planta <ArrowRight size={14} />

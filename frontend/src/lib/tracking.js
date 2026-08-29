@@ -34,10 +34,38 @@ export function trackLeadConversion() {
   return true;
 }
 
-export function trackWhatsAppClick(location = "site") {
+export function trackWhatsAppClick(location = "site", { onComplete, timeout = 1000 } = {}) {
+  if (!onComplete) {
+    pushDataLayer({ event: "whatsapp_click", link_location: location });
+    return;
+  }
+
+  // Let GTM confirm the tags for this event actually fired before we
+  // navigate away — falls back to the timeout so we never block forever.
+  let done = false;
+  const complete = () => {
+    if (done) return;
+    done = true;
+    onComplete();
+  };
+
   pushDataLayer({
     event: "whatsapp_click",
     link_location: location,
+    eventCallback: complete,
+    eventTimeout: timeout,
+  });
+  setTimeout(complete, timeout);
+}
+
+// Diagnostic signal only — fires the instant the user hits submit on the
+// RD Station form, before RD's own validation/AJAX runs. Do NOT wire this
+// to a Google Ads conversion trigger; use generate_lead for that.
+export function trackLeadFormSubmitAttempt() {
+  pushDataLayer({
+    event: "lead_form_submit_attempt",
+    form_id: LEAD_FORM_ID,
+    form_name: "espontone",
   });
 }
 

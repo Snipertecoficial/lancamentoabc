@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { LEAD_FORM_ID } from "@/lib/tracking";
+import { LEAD_FORM_ID, trackLeadFormSubmitAttempt } from "@/lib/tracking";
 
 const LeadFormCard = ({
   compact = false,
@@ -28,6 +28,12 @@ const LeadFormCard = ({
     });
     if (container) observer.observe(container, { childList: true, subtree: true });
 
+    // Capture phase so we see the native submit the instant the user clicks
+    // send, ahead of RD Station's own handler — diagnostic only, doesn't
+    // touch the event (no preventDefault).
+    const onSubmitAttempt = () => trackLeadFormSubmitAttempt();
+    if (container) container.addEventListener("submit", onSubmitAttempt, true);
+
     // Inject RD Station script if not present
     if (!document.getElementById("rd-station-script")) {
       const script = document.createElement("script");
@@ -53,7 +59,10 @@ const LeadFormCard = ({
       }
     }
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (container) container.removeEventListener("submit", onSubmitAttempt, true);
+    };
   }, []);
 
   return (

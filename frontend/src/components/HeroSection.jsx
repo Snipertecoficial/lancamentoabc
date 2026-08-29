@@ -83,7 +83,7 @@ const HeroSection = () => {
 
             {/* Primary CTAs */}
             <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
-              <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.hero)} data-testid="hero-cta-whatsapp">
+              <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.hero, "hero_cta_whatsapp")} data-testid="hero-cta-whatsapp">
                 <PlayCircle size={16} /> Quero condições exclusivas
               </button>
               <a href="#contato" className="btn-outline-gold" data-testid="hero-cta-unit">
@@ -167,14 +167,14 @@ const HeroSection = () => {
               <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
                 <button
                   className="btn-gold whitespace-nowrap"
-                  onClick={() => openWhatsApp(WA_MESSAGES.visit)}
+                  onClick={() => openWhatsApp(WA_MESSAGES.visit, "hero_agendar_visita")}
                   data-testid="hero-cta-visit"
                 >
                   <CalendarCheck size={16} /> Agendar visita
                 </button>
                 <button
                   className="btn-outline-gold whitespace-nowrap"
-                  onClick={() => openWhatsApp(WA_MESSAGES.finalCta)}
+                  onClick={() => openWhatsApp(WA_MESSAGES.finalCta, "hero_falar_corretor")}
                   data-testid="hero-cta-talk"
                 >
                   <MessageCircle size={16} /> Falar com corretor
