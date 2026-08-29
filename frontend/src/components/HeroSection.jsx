@@ -79,16 +79,19 @@ const HeroSection = () => {
               <div className="device-mock-glow" aria-hidden="true" />
               <div className="device-mock-notch" />
               <div className="device-mock-screen">
-                <iframe
+                <video
                   className="w-full h-full object-cover"
-                  src="https://www.youtube.com/embed/MBYgQBK6XJc?autoplay=1&mute=1&loop=1&playlist=MBYgQBK6XJc&controls=1&playsinline=1&modestbranding=1&rel=0"
-                  title="Tour Virtual"
-                  frameBorder="0"
-                  loading="lazy"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
+                  poster="/tour-poster.jpg"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  aria-label="Tour Virtual"
                   data-testid="hero-video"
-                ></iframe>
+                >
+                  <source src="/tour-video.mp4" type="video/mp4" />
+                </video>
               </div>
             </div>
           </div>
