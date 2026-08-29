@@ -109,6 +109,35 @@
   border-radius: 16px;
 }
 
+/* ---------- Hero video controls (play/pause + mute) ---------- */
+.hero-video-controls {
+  position: absolute;
+  left: 50%; bottom: 14px; transform: translateX(-50%);
+  z-index: 4;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px;
+  background: rgba(6,18,36,.55);
+  border: 1px solid rgba(217,187,120,.3);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  opacity: .85;
+  transition: opacity .25s ease;
+}
+.hero-video-controls:hover,
+.hero-video-controls:focus-within { opacity: 1; }
+.hero-video-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: #D9BB78;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease;
+}
+.hero-video-btn:hover { background: rgba(217,187,120,.18); color: #F0F5FA; }
+.hero-video-btn:focus-visible { outline: 2px solid #D9BB78; outline-offset: 2px; }
+
 .device-mock-glow {
   position: absolute; inset: -40px; z-index: -1;
   background: radial-gradient(60% 60% at 50% 50%, rgba(91,149,206,.3) 0%, transparent 70%);

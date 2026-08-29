@@ -1,5 +1,5 @@
-import React from "react";
-import { Bed, Car, Waves, Ruler, Sparkles, PlayCircle, MessageCircle, CalendarCheck } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Bed, Car, Waves, Ruler, Sparkles, PlayCircle, MessageCircle, CalendarCheck, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
 
 const ATTRS = [
@@ -10,6 +10,38 @@ const ATTRS = [
 ];
 
 const HeroSection = () => {
+  const videoRef = useRef(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  // Browsers block autoplay-with-sound outright, but a real user gesture
+  // anywhere on the page unlocks audio — so unmute on the first one.
+  useEffect(() => {
+    const unmuteOnFirstInteraction = () => {
+      const video = videoRef.current;
+      if (video && video.muted) {
+        video.muted = false;
+        setIsMuted(false);
+      }
+    };
+    const events = ["click", "touchstart", "scroll", "keydown"];
+    events.forEach((evt) => window.addEventListener(evt, unmuteOnFirstInteraction, { once: true, passive: true }));
+    return () => events.forEach((evt) => window.removeEventListener(evt, unmuteOnFirstInteraction));
+  }, []);
+
+  const togglePlay = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) video.play();
+    else video.pause();
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+  };
 
   return (
     <section id="top" className="relative overflow-hidden" data-testid="hero-section">
@@ -80,6 +112,7 @@ const HeroSection = () => {
               <div className="device-mock-notch" />
               <div className="device-mock-screen">
                 <video
+                  ref={videoRef}
                   className="w-full h-full object-cover"
                   poster="/tour-poster.jpg"
                   autoPlay
@@ -89,9 +122,33 @@ const HeroSection = () => {
                   preload="metadata"
                   aria-label="Tour Virtual"
                   data-testid="hero-video"
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onVolumeChange={(e) => setIsMuted(e.currentTarget.muted)}
                 >
                   <source src="/tour-video.mp4" type="video/mp4" />
                 </video>
+
+                <div className="hero-video-controls">
+                  <button
+                    type="button"
+                    className="hero-video-btn"
+                    onClick={togglePlay}
+                    aria-label={isPlaying ? "Pausar vídeo" : "Tocar vídeo"}
+                    data-testid="hero-video-play-toggle"
+                  >
+                    {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                  </button>
+                  <button
+                    type="button"
+                    className="hero-video-btn"
+                    onClick={toggleMute}
+                    aria-label={isMuted ? "Ativar som" : "Desativar som"}
+                    data-testid="hero-video-mute-toggle"
+                  >
+                    {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
