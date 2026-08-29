@@ -3,7 +3,7 @@
 // endpoint without number so it opens the WhatsApp chooser.
 import { trackWhatsAppClick } from "@/lib/tracking";
 
-const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || "5511947723347"; // Ex: 5511999999999
+const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || "5511940383680"; // Ex: 5511999999999
 export function buildWhatsAppUrl(message = "", customPhone = null) {
   const encoded = encodeURIComponent(message);
   const phoneToUse = customPhone || WHATSAPP_PHONE;
