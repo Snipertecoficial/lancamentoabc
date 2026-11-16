@@ -68,3 +68,24 @@ Deno.test("OPTIONS -> 204 com CORS", async () => {
   assertEquals(r.status, 204);
   assertEquals(r.headers.get("access-control-allow-origin"), ORIGIN);
 });
+
+Deno.test("consume que lança -> 500 {ok:false} com CORS", async () => {
+  const req = new Request("http://x/confirm-lead", {
+    method: "POST",
+    headers: { origin: ORIGIN },
+    body: JSON.stringify({ lead_token: TOKEN }),
+  });
+  const orig = console.error;
+  console.error = () => {};
+  try {
+    const r = await handleConfirmLead(req, {
+      consume: () => Promise.reject(new Error("db down")),
+      allowedOrigins: [ORIGIN],
+    });
+    assertEquals(r.status, 500);
+    assertEquals(await r.json(), { ok: false });
+    assertEquals(r.headers.get("access-control-allow-origin"), ORIGIN);
+  } finally {
+    console.error = orig;
+  }
+});

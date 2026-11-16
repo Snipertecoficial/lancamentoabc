@@ -29,7 +29,13 @@ export async function handleConfirmLead(req: Request, deps: ConfirmLeadDeps): Pr
   }
   if (typeof token !== "string" || !UUID_RE.test(token)) return json(400, { ok: false });
 
-  const row = await deps.consume(token);
+  let row: Awaited<ReturnType<ConfirmLeadDeps["consume"]>>;
+  try {
+    row = await deps.consume(token);
+  } catch (err) {
+    console.error("confirm-lead consume failed", err);
+    return json(500, { ok: false });
+  }
   if (!row) return json(404, { ok: false });
   if (!row.first_use) return json(200, { ok: true, first_use: false, user_data: null });
 
