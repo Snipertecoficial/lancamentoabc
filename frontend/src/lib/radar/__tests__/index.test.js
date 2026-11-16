@@ -42,8 +42,9 @@ test("batch has v, env, session_id, landing_url and event", () => {
     expect(b.session_id).toMatch(UUID);
     expect(b.visitor_id).toBeNull();
     expect(b.session.landing_url).toMatch(/^http/);
-    expect(b.events[0]).toMatchObject({ type: "cta_click", name: "hero", section: "hero", props: { a: 1 } });
-    expect(b.events[0].id).toMatch(UUID);
+    const ev = b.events.find((e) => e.type === "cta_click"); // initRadar's page_view comes first
+    expect(ev).toMatchObject({ type: "cta_click", name: "hero", section: "hero", props: { a: 1 } });
+    expect(ev.id).toMatch(UUID);
   });
 });
 

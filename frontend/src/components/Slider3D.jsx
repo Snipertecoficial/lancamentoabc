@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { ChevronLeft, ChevronRight, MousePointer2 } from "lucide-react";
+import { track } from "@/lib/radar";
 import { LEISURE_CATEGORIES, HERO_IMAGES, CONSTRUCTION_PHOTOS } from "@/data/content";
 
 // Curated hero images for the 3D slide: fachada + best leisure spaces + construction highlight
@@ -28,6 +29,13 @@ const Slider3D = () => {
   const isInView = useRef(false);
 
   const total = SLIDES.length;
+
+  // slider_view on every index change (not on mount)
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    track("slider_view", { index, title: SLIDES[index].title });
+  }, [index]);
 
   const goTo = useCallback((i) => {
     setIndex(((i % total) + total) % total);

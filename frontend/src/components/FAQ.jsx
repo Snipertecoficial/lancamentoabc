@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Reveal from "@/components/Reveal";
 import { FAQ_ITEMS } from "@/data/content";
 import { ChevronDown } from "lucide-react";
+import { track } from "@/lib/radar";
 
 const FAQ = () => {
   const [open, setOpen] = useState(0);
@@ -21,7 +22,10 @@ const FAQ = () => {
             <Reveal key={i} delay={i * 60}>
               <div className="faq-item" data-testid={`faq-item-${i}`}>
                 <button
-                  onClick={() => setOpen(open === i ? -1 : i)}
+                  onClick={() => {
+                    if (open !== i) track("faq_open", { question: item.q }, { section: "faq" });
+                    setOpen(open === i ? -1 : i);
+                  }}
                   className="w-full flex items-center justify-between text-left p-5 md:p-6"
                   aria-expanded={open === i}
                   data-testid={`faq-toggle-${i}`}

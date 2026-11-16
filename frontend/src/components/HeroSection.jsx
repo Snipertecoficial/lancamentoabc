@@ -113,6 +113,7 @@ const HeroSection = () => {
               <div className="device-mock-screen">
                 <video
                   ref={videoRef}
+                  data-radar-video="hero"
                   className="w-full h-full object-cover"
                   poster="/tour-poster.jpg"
                   autoPlay

@@ -4,6 +4,10 @@ import { hasConsent } from "./consent";
 import { readAttribution } from "./attribution";
 import { createQueue } from "./queue";
 import { sendBatch } from "./transport";
+import * as page from "./collectors/page";
+import * as sections from "./collectors/sections";
+import * as clicks from "./collectors/clicks";
+import * as video from "./collectors/video";
 
 const ATTR_KEY = "rdr_attr";
 const LEAD_KEY = "radar_lead_token";
@@ -43,6 +47,10 @@ export function initRadar() {
       if (document.visibilityState === "hidden") queue.flush(true);
     });
   } catch (e) { /* ignore */ }
+  // Collectors receive `track` as a parameter (avoids a circular import).
+  [page, sections, clicks, video].forEach((c) => {
+    try { c.start(track); } catch (e) { /* ignore */ }
+  });
 }
 
 export function track(type, props, opts) {
