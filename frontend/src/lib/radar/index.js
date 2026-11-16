@@ -38,6 +38,8 @@ const queue = createQueue({
   },
 });
 
+let stops = [];
+
 export function initRadar() {
   if (inited || !RADAR_URL) return;
   inited = true;
@@ -46,14 +48,25 @@ export function initRadar() {
   // and the flush then includes it.
   // Collectors receive `track` as a parameter (avoids a circular import).
   [page, sections, clicks, video].forEach((c) => {
-    try { c.start(track); } catch (e) { /* ignore */ }
+    try { stops.push(c.start(track)); } catch (e) { /* ignore */ }
   });
   try {
-    window.addEventListener("pagehide", () => queue.flush(true));
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") queue.flush(true);
+    const onHide = () => queue.flush(true);
+    const onVis = () => { if (document.visibilityState === "hidden") queue.flush(true); };
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onVis);
+    stops.push(() => {
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onVis);
     });
   } catch (e) { /* ignore */ }
+}
+
+// Test-only: detach every listener/collector started by initRadar.
+export function __stopRadar() {
+  stops.forEach((f) => { try { f(); } catch (e) { /* ignore */ } });
+  stops = [];
+  inited = false;
 }
 
 export function track(type, props, opts) {

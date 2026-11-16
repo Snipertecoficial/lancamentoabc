@@ -7,8 +7,12 @@ function load(url) {
   jest.resetModules();
   if (url) process.env.REACT_APP_RADAR_URL = url;
   else delete process.env.REACT_APP_RADAR_URL;
-  return require("../index");
+  const m = require("../index");
+  loaded.push(m);
+  return m;
 }
+const loaded = [];
+afterEach(() => { loaded.splice(0).forEach((m) => m.__stopRadar()); }); // no leaked listeners across tests
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -108,7 +112,8 @@ describe("section_view timing + flush ordering", () => {
     now = 15000;                              // leaves 2 s after returning
     cb([{ target: document.querySelector("section"), isIntersecting: false, intersectionRatio: 0 }]);
     window.dispatchEvent(new Event("pagehide"));
-    const all = [...(await events(0)), ...(navigator.sendBeacon.mock.calls[1] ? await events(1) : [])];
+    const all = [];
+    for (let i = 0; i < navigator.sendBeacon.mock.calls.length; i++) all.push(...(await events(i)));
     expect(all.filter((e) => e.type === "section_view").map((e) => e.props.seconds)).toEqual([2, 2]);
   });
 });
