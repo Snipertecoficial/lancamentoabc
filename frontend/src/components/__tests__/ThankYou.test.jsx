@@ -9,10 +9,12 @@ jest.mock("react-router-dom", () => ({ Link: ({ to, children, ...p }) => <a href
 const mockTrack = jest.fn();
 const mockGetLeadToken = jest.fn();
 const mockConfirmLead = jest.fn();
+let mockEnabled = true;
 jest.mock("@/lib/radar", () => ({
   track: (...a) => mockTrack(...a),
   getLeadToken: () => mockGetLeadToken(),
   confirmLead: (...a) => mockConfirmLead(...a),
+  isRadarEnabled: () => mockEnabled,
 }));
 
 const ThankYou = require("../ThankYou").default;
@@ -35,6 +37,7 @@ beforeEach(() => {
   sessionStorage.clear();
   window.dataLayer = [];
   window.scrollTo = jest.fn();
+  mockEnabled = true;
   mockTrack.mockClear();
   mockGetLeadToken.mockReset();
   mockConfirmLead.mockReset();
@@ -87,4 +90,91 @@ test("a never-resolving confirmLead does not delay the redirect", async () => {
   await mount();
   await act(async () => { jest.advanceTimersByTime(5100); });
   expect(waPushes()).toHaveLength(1);
+});
+
+// jsdom cannot navigate; it reports an attempt as a "Not implemented: navigation" console error.
+const navigations = (spy) => spy.mock.calls.filter((c) => String(c[0] && (c[0].message || c[0])).includes("navigation")).length;
+
+test("confirmLead null, null, then first_use -> exactly one generate_lead with user_data", async () => {
+  mockGetLeadToken.mockReturnValue("tok");
+  mockConfirmLead
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce(null)
+    .mockResolvedValueOnce({ first_use: true, user_data: { sha256_email_address: "abc" } });
+  await mount();
+  await act(async () => { jest.advanceTimersByTime(700); });
+  await act(async () => { jest.advanceTimersByTime(700); });
+  expect(mockConfirmLead).toHaveBeenCalledTimes(3);
+  expect(leadPushes()).toHaveLength(1);
+  expect(leadPushes()[0].user_data).toEqual({ sha256_email_address: "abc" });
+});
+
+test("confirmLead keeps returning null -> stops after 3 attempts, no generate_lead", async () => {
+  mockGetLeadToken.mockReturnValue("tok");
+  mockConfirmLead.mockResolvedValue(null);
+  await mount();
+  for (let i = 0; i < 4; i++) await act(async () => { jest.advanceTimersByTime(700); });
+  expect(mockConfirmLead).toHaveBeenCalledTimes(3);
+  expect(leadPushes()).toHaveLength(0);
+});
+
+describe("quick click on the WhatsApp button", () => {
+  let err;
+  beforeEach(() => { err = jest.spyOn(console, "error").mockImplementation(() => {}); });
+  afterEach(() => err.mockRestore());
+  const click = async () => {
+    await act(async () => {
+      container.querySelector("a[data-radar-skip]").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    });
+  };
+
+  test("confirmation resolving at 800ms -> generate_lead pushed before navigation", async () => {
+    mockGetLeadToken.mockReturnValue("tok");
+    let resolve;
+    mockConfirmLead.mockReturnValue(new Promise((r) => { resolve = r; }));
+    await mount();
+    await click();
+    await act(async () => { jest.advanceTimersByTime(800); });
+    expect(navigations(err)).toBe(0);
+    await act(async () => { resolve({ first_use: true, user_data: { x: 1 } }); });
+    expect(leadPushes()).toHaveLength(1);
+    await act(async () => { jest.advanceTimersByTime(1000); });
+    expect(navigations(err)).toBe(1);
+  });
+
+  test("never-resolving confirmation -> navigates by ~1.5s", async () => {
+    mockGetLeadToken.mockReturnValue("tok");
+    mockConfirmLead.mockReturnValue(new Promise(() => {}));
+    await mount();
+    await click();
+    await act(async () => { jest.advanceTimersByTime(1400); });
+    expect(navigations(err)).toBe(0);
+    await act(async () => { jest.advanceTimersByTime(150); });
+    expect(navigations(err)).toBe(1);
+  });
+});
+
+test("radar disabled -> legacy generate_lead on mount without user_data, once per session", async () => {
+  mockEnabled = false;
+  mockGetLeadToken.mockReturnValue(null);
+  await mount();
+  expect(leadPushes()).toHaveLength(1);
+  expect(leadPushes()[0].user_data).toBeUndefined();
+  expect(mockConfirmLead).not.toHaveBeenCalled();
+  await act(async () => { root.unmount(); });
+  await mount(); // remount: session guard blocks a second push
+  expect(leadPushes()).toHaveLength(1);
+});
+
+test("radar enabled -> no legacy push on mount", async () => {
+  mockGetLeadToken.mockReturnValue(null);
+  await mount();
+  expect(leadPushes()).toHaveLength(0);
+});
+
+test("anchor carries data-radar-skip and explicit whatsapp_click has lead_token", async () => {
+  mockGetLeadToken.mockReturnValue("tok");
+  mockConfirmLead.mockResolvedValue(null);
+  await mount();
+  expect(container.querySelector("a[data-radar-skip]")).not.toBeNull();
 });

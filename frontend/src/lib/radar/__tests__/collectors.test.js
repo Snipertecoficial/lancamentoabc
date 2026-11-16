@@ -30,6 +30,14 @@ test("wa.me link -> whatsapp_click, href without query/fragment", () => {
   );
 });
 
+test("element with or inside [data-radar-skip] is not tracked", () => {
+  document.body.innerHTML = '<section id="s"><a data-radar-skip href="https://wa.me/5511999999999">Falar</a><div data-radar-skip><button>x</button></div></section>';
+  run(startClicks);
+  document.querySelector("a").click();
+  document.querySelector("button").click();
+  expect(track).not.toHaveBeenCalled();
+});
+
 test("label falls back to text capped at 60 chars", () => {
   document.body.innerHTML = `<button>${"x".repeat(100)}</button>`;
   run(startClicks);

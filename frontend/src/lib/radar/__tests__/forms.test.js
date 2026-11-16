@@ -63,6 +63,18 @@ test("form injected after start (pop-up) is captured", () => {
   expect(identify).toHaveBeenCalledWith({ name: "", phone: "", email: "p@x.com", formId: "popup" });
 });
 
+test("personal_phone is detected as lead form and used as phone", () => {
+  document.body.insertAdjacentHTML("beforeend", '<form id="p2"><input name="personal_phone" value="(11) 99999-0000" /></form>');
+  submit(document.getElementById("p2"));
+  expect(identify).toHaveBeenCalledWith({ name: "", phone: "(11) 99999-0000", email: "", formId: "p2" });
+});
+
+test("mobile_phone wins over personal_phone", () => {
+  document.body.insertAdjacentHTML("beforeend", '<form id="p3"><input name="mobile_phone" value="A" /><input name="personal_phone" value="B" /></form>');
+  submit(document.getElementById("p3"));
+  expect(identify.mock.calls[0][0].phone).toBe("A");
+});
+
 test("non-lead form is ignored", () => {
   document.body.insertAdjacentHTML("beforeend", '<form id="search"><input name="q" /></form>');
   const f = document.getElementById("search");

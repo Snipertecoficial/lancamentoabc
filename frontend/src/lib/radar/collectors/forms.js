@@ -1,4 +1,4 @@
-const isLeadForm = (f) => !!f && !!f.querySelector('input[name="mobile_phone"], input[name="email"]');
+const isLeadForm = (f) => !!f && !!f.querySelector('input[name="mobile_phone"], input[name="personal_phone"], input[name="email"]');
 const formOf = (el) => (el && el.closest ? el.closest("form") : null);
 const val = (f, n) => {
   const i = f.querySelector(`[name="${n}"]`);
@@ -36,7 +36,7 @@ export function start(track, identify) {
     started.delete(f);
     done.add(f);
     track("form_submit_attempt", { form_id: formId });
-    identify({ name: val(f, "name"), phone: val(f, "mobile_phone"), email: val(f, "email"), formId });
+    identify({ name: val(f, "name"), phone: val(f, "mobile_phone") || val(f, "personal_phone"), email: val(f, "email"), formId });
   });
 
   const onHide = () => safe(() => {

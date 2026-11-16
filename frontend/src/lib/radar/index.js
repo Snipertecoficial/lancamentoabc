@@ -81,6 +81,10 @@ export function track(type, props, opts) {
   } catch (err) { /* never throw */ }
 }
 
+export function isRadarEnabled() {
+  return !!RADAR_URL;
+}
+
 export function getLeadToken() {
   try { return sessionStorage.getItem(LEAD_KEY); } catch (e) { return null; }
 }

@@ -7,6 +7,7 @@ export function start(track) {
       const now = Date.now();
       const x = ev.clientX || 0;
       const y = ev.clientY || 0;
+      if (ev.target && ev.target.closest && ev.target.closest("[data-radar-skip]")) return; // tracked explicitly by the page
       const el = ev.target && ev.target.closest && ev.target.closest("a,button,[data-radar]");
       const section = el && el.closest("section[id]");
       const sec = section ? { section: section.id } : undefined;
