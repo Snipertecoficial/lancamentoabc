@@ -1,6 +1,7 @@
 export function start(track) {
   if (typeof IntersectionObserver === "undefined") return () => {};
-  const since = new Map(); // element -> ms when it became visible
+  const since = new Map(); // element -> ms when the current visible stretch began (running clock)
+  const inview = new Set(); // elements currently in view (clock may be paused while tab hidden)
   const report = (el, now) => {
     const t0 = since.get(el);
     if (t0 === undefined) return;
@@ -22,20 +23,32 @@ export function start(track) {
     (entries) => {
       const now = Date.now();
       entries.forEach((en) => {
-        if (inView(en)) { if (!since.has(en.target)) since.set(en.target, now); }
-        else report(en.target, now);
+        if (inView(en)) {
+          inview.add(en.target);
+          if (!since.has(en.target) && document.visibilityState !== "hidden") since.set(en.target, now);
+        } else {
+          inview.delete(en.target);
+          report(en.target, now);
+        }
       });
     },
     { threshold: [0, 0.25, 0.5, 0.75, 1] }
   );
   document.querySelectorAll("section[id]").forEach((el) => io.observe(el));
+  // Hidden tab / pagehide: close every running clock (emit section_view) so hidden time is not counted.
   const onHide = () => {
     const now = Date.now();
     Array.from(since.keys()).forEach((el) => report(el, now));
   };
+  const onVis = () => {
+    if (document.visibilityState === "hidden") onHide();
+    else { const now = Date.now(); inview.forEach((el) => since.set(el, now)); }
+  };
   window.addEventListener("pagehide", onHide);
+  document.addEventListener("visibilitychange", onVis);
   return () => {
     window.removeEventListener("pagehide", onHide);
+    document.removeEventListener("visibilitychange", onVis);
     io.disconnect();
   };
 }

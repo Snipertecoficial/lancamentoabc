@@ -72,3 +72,43 @@ test("confirmLead parses ok, returns null on failure", async () => {
   global.fetch = jest.fn(() => Promise.reject(new Error("x")));
   expect(await r.confirmLead("tok")).toBeNull();
 });
+
+describe("section_view timing + flush ordering", () => {
+  let cb, now, vis;
+  const setVis = (v) => { vis = v; document.dispatchEvent(new Event("visibilitychange")); };
+  const events = async (n) => JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[n][1])).events;
+  beforeEach(() => {
+    now = 1000; vis = "visible";
+    jest.spyOn(Date, "now").mockImplementation(() => now);
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => vis });
+    global.IntersectionObserver = jest.fn((f) => { cb = f; return { observe: jest.fn(), disconnect: jest.fn() }; });
+    document.body.innerHTML = '<section id="faq"></section>';
+  });
+  afterEach(() => { delete global.IntersectionObserver; delete document.visibilityState; jest.restoreAllMocks(); });
+  const enter = () => cb([{ target: document.querySelector("section"), isIntersecting: true, intersectionRatio: 1 }]);
+
+  test("visibilitychange hidden: section_view is in the beaconed batch", async () => {
+    const r = load("https://r.test/fn"); r.initRadar(); enter();
+    now = 6000; setVis("hidden");
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+    expect((await events(0)).find((e) => e.type === "section_view")).toMatchObject({ section: "faq", props: { seconds: 5 } });
+  });
+
+  test("pagehide: section_view is in the beaconed batch", async () => {
+    const r = load("https://r.test/fn"); r.initRadar(); enter();
+    now = 4000; window.dispatchEvent(new Event("pagehide"));
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+    expect((await events(0)).find((e) => e.type === "section_view").props.seconds).toBe(3);
+  });
+
+  test("hidden time is not counted", async () => {
+    const r = load("https://r.test/fn"); r.initRadar(); enter();
+    now = 3000; setVis("hidden");            // 2 s in view
+    now = 13000; setVis("visible");          // 10 s hidden
+    now = 15000;                              // leaves 2 s after returning
+    cb([{ target: document.querySelector("section"), isIntersecting: false, intersectionRatio: 0 }]);
+    window.dispatchEvent(new Event("pagehide"));
+    const all = [...(await events(0)), ...(navigator.sendBeacon.mock.calls[1] ? await events(1) : [])];
+    expect(all.filter((e) => e.type === "section_view").map((e) => e.props.seconds)).toEqual([2, 2]);
+  });
+});

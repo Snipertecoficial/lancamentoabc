@@ -41,16 +41,19 @@ const queue = createQueue({
 export function initRadar() {
   if (inited || !RADAR_URL) return;
   inited = true;
+  // Collectors start BEFORE the flush listeners below: listeners run in registration order, so a
+  // collector's pagehide/visibilitychange handler (e.g. sections' section_view) enqueues first
+  // and the flush then includes it.
+  // Collectors receive `track` as a parameter (avoids a circular import).
+  [page, sections, clicks, video].forEach((c) => {
+    try { c.start(track); } catch (e) { /* ignore */ }
+  });
   try {
     window.addEventListener("pagehide", () => queue.flush(true));
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") queue.flush(true);
     });
   } catch (e) { /* ignore */ }
-  // Collectors receive `track` as a parameter (avoids a circular import).
-  [page, sections, clicks, video].forEach((c) => {
-    try { c.start(track); } catch (e) { /* ignore */ }
-  });
 }
 
 export function track(type, props, opts) {
