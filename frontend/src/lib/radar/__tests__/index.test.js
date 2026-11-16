@@ -117,3 +117,15 @@ describe("section_view timing + flush ordering", () => {
     expect(all.filter((e) => e.type === "section_view").map((e) => e.props.seconds)).toEqual([2, 2]);
   });
 });
+
+test("form_abandon is enqueued before the pagehide flush and lands in the beaconed batch", async () => {
+  document.body.innerHTML = '<form id="f"><input name="email" /></form>';
+  const r = load("https://r.test/fn");
+  r.initRadar();
+  document.querySelector('[name="email"]').dispatchEvent(new Event("focusin", { bubbles: true }));
+  window.dispatchEvent(new Event("pagehide"));
+  expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+  const b = JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[0][1]));
+  expect(b.events.find((e) => e.type === "form_abandon").props).toEqual({ last_field: "email" });
+  document.body.innerHTML = "";
+});

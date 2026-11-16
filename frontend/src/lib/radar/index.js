@@ -8,6 +8,7 @@ import * as page from "./collectors/page";
 import * as sections from "./collectors/sections";
 import * as clicks from "./collectors/clicks";
 import * as video from "./collectors/video";
+import * as forms from "./collectors/forms";
 
 const ATTR_KEY = "rdr_attr";
 const LEAD_KEY = "radar_lead_token";
@@ -47,8 +48,8 @@ export function initRadar() {
   // collector's pagehide/visibilitychange handler (e.g. sections' section_view) enqueues first
   // and the flush then includes it.
   // Collectors receive `track` as a parameter (avoids a circular import).
-  [page, sections, clicks, video].forEach((c) => {
-    try { stops.push(c.start(track)); } catch (e) { /* ignore */ }
+  [page, sections, clicks, video, forms].forEach((c) => {
+    try { stops.push(c.start(track, identifyLead)); } catch (e) { /* ignore */ }
   });
   try {
     const onHide = () => queue.flush(true);

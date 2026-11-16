@@ -4,15 +4,24 @@ import { MessageCircle } from "lucide-react";
 import EspontoneLogo from "@/components/EspontoneLogo";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { trackLeadConversion, trackWhatsAppClick } from "@/lib/tracking";
+import { track, getLeadToken, confirmLead } from "@/lib/radar";
 
 const ThankYou = () => {
   const waUrl = buildWhatsAppUrl("Olá! Preenchi o formulário no site e gostaria de falar com um corretor sobre o lançamento.");
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    trackLeadConversion();
+    track("thank_you_view");
+    // generate_lead only when the server confirms the token's first use (no token = no conversion).
+    const token = getLeadToken();
+    if (token) {
+      confirmLead(token)
+        .then((result) => { if (result && result.first_use === true) trackLeadConversion(result.user_data); })
+        .catch(() => {});
+    }
     // Give GTM up to 5s to dispatch GA4 and Google Ads before leaving the page.
     const timer = setTimeout(() => {
+      track("whatsapp_click", { lead_token: token }, { name: "thank_you_auto_redirect" });
       trackWhatsAppClick("thank_you_auto_redirect", {
         onComplete: () => { window.location.href = waUrl; },
       });
@@ -24,6 +33,7 @@ const ThankYou = () => {
     // Let modifier/middle clicks open a new tab natively — only intercept a plain click.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
+    track("whatsapp_click", { lead_token: getLeadToken() }, { name: "thank_you_page" });
     trackWhatsAppClick("thank_you_page", {
       onComplete: () => { window.location.href = waUrl; },
     });

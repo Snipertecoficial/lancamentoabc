@@ -107,6 +107,13 @@ let webpackConfig = {
   },
 };
 
+// Mirror the webpack '@' alias for Jest.
+webpackConfig.jest = {
+  configure: {
+    moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+  },
+};
+
 webpackConfig.devServer = (devServerConfig) => {
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {

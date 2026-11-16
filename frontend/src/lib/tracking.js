@@ -6,19 +6,22 @@ export function pushDataLayer(event) {
   window.dataLayer.push(event);
 }
 
-export function trackLeadConversion() {
+export function trackLeadConversion(userData) {
   const storageKey = "espontone-generate-lead";
 
   // Prevent React remounts and page refreshes from counting the same lead twice.
   if (sessionStorage.getItem(storageKey)) return false;
   sessionStorage.setItem(storageKey, "true");
 
-  pushDataLayer({
+  const payload = {
     event: "generate_lead",
     form_id: LEAD_FORM_ID,
     form_name: "espontone",
     lead_source: "rd_station",
-  });
+  };
+  // Enhanced Conversions: hashed first-party data confirmed server-side.
+  if (userData) payload.user_data = userData;
+  pushDataLayer(payload);
 
   // Send the recommended GA4 event immediately as well. The dataLayer event
   // remains available for the Google Ads conversion trigger in GTM.
