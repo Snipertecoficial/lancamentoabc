@@ -93,10 +93,34 @@ describe("sections", () => {
     let now = 1000;
     jest.spyOn(Date, "now").mockImplementation(() => now);
     run(startSections);
-    cb([{ target: el, isIntersecting: true }]);
+    cb([{ target: el, isIntersecting: true, intersectionRatio: 0.6 }]);
     now = 4400;
-    cb([{ target: el, isIntersecting: false }]);
+    cb([{ target: el, isIntersecting: false, intersectionRatio: 0 }]);
     expect(track).toHaveBeenCalledWith("section_view", { seconds: 3 }, { section: "faq" });
+    delete global.IntersectionObserver;
+  });
+
+  test("tall section covering 60% of viewport at 0.3 ratio counts as in view", () => {
+    let cb;
+    global.IntersectionObserver = jest.fn((f) => { cb = f; return { observe: jest.fn(), disconnect: jest.fn() }; });
+    document.body.innerHTML = '<section id="top"></section>';
+    const el = document.querySelector("section");
+    let now = 1000;
+    jest.spyOn(Date, "now").mockImplementation(() => now);
+    run(startSections);
+    expect(global.IntersectionObserver.mock.calls[0][1].threshold).toEqual([0, 0.25, 0.5, 0.75, 1]);
+    const tall = { target: el, isIntersecting: true, intersectionRatio: 0.3,
+      rootBounds: { height: 800 }, intersectionRect: { height: 480 } };
+    cb([tall]);
+    now = 3000;
+    cb([{ target: el, isIntersecting: false, intersectionRatio: 0 }]);
+    expect(track).toHaveBeenCalledWith("section_view", { seconds: 2 }, { section: "top" });
+    // 30% ratio and only 40% of viewport -> not in view
+    track.mockClear();
+    cb([{ ...tall, intersectionRect: { height: 320 } }]);
+    now = 9000;
+    cb([{ target: el, isIntersecting: false, intersectionRatio: 0 }]);
+    expect(track).not.toHaveBeenCalled();
     delete global.IntersectionObserver;
   });
 });
