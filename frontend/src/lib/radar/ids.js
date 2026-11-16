@@ -49,3 +49,9 @@ export function getVisitorId(granted) {
     return null;
   }
 }
+
+// Consent revoked: remove the persistent identifier (cookie + localStorage mirror).
+export function clearVisitorId() {
+  try { document.cookie = "rdr_vid=; max-age=0; path=/; SameSite=Lax"; } catch (e) { /* ignore */ }
+  try { localStorage.removeItem("rdr_vid"); } catch (e) { /* ignore */ }
+}

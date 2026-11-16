@@ -1,5 +1,5 @@
 import { RADAR_URL, RADAR_ENV } from "./config";
-import { uuid, getSessionId, getVisitorId } from "./ids";
+import { uuid, getSessionId, getVisitorId, clearVisitorId } from "./ids";
 import { hasConsent, onConsentChange } from "./consent";
 import { readAttribution } from "./attribution";
 import { createQueue } from "./queue";
@@ -52,7 +52,7 @@ export function initRadar() {
   [page, sections, clicks, video, forms].forEach((c) => {
     try { stops.push(c.start(track, identifyLead)); } catch (e) { /* ignore */ }
   });
-  try { stops.push(onConsentChange((granted) => { consentOverride = granted; })); } catch (e) { /* ignore */ }
+  try { stops.push(onConsentChange((granted) => { consentOverride = granted; if (!granted) clearVisitorId(); })); } catch (e) { /* ignore */ }
   try {
     const onHide = () => queue.flush(true);
     const onVis = () => { if (document.visibilityState === "hidden") queue.flush(true); };

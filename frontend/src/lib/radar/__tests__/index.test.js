@@ -160,3 +160,30 @@ describe("radar:consent event", () => {
     expect((await flushBatch(0)).visitor_id).toBeNull();
   });
 });
+
+describe("revoking consent removes the persistent visitor id", () => {
+  const consent = (granted) => window.dispatchEvent(new CustomEvent("radar:consent", { detail: { granted } }));
+
+  test("accept: cookie exists; deny: cookie and localStorage mirror gone, next batch visitor_id null", async () => {
+    const r = load("https://r.test/fn");
+    r.initRadar();
+    localStorage.setItem("lgpd-consent", "granted");
+    consent(true);
+    window.dispatchEvent(new Event("pagehide"));
+    const first = JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[0][1]));
+    expect(first.visitor_id).toMatch(UUID);
+    expect(document.cookie).toContain("rdr_vid=" + first.visitor_id);
+    expect(localStorage.getItem("rdr_vid")).toBe(first.visitor_id);
+
+    localStorage.setItem("lgpd-consent", "denied");
+    consent(false);
+    expect(document.cookie).not.toContain("rdr_vid");
+    expect(localStorage.getItem("rdr_vid")).toBeNull();
+
+    r.track("cta_click");
+    window.dispatchEvent(new Event("pagehide"));
+    const next = JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[1][1]));
+    expect(next.visitor_id).toBeNull();
+    expect(document.cookie).not.toContain("rdr_vid");
+  });
+});
