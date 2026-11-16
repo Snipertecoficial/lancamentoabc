@@ -24,6 +24,15 @@ export type IngestDeps = {
   ipSalt: string;
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PII_KEYS = new Set([
+  "name", "nome", "phone", "telefone", "celular", "mobile_phone", "phone_raw", "email", "e-mail",
+]);
+
+function scrubPii(props: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(props).filter(([k]) => !PII_KEYS.has(k.toLowerCase())));
+}
+
 const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
 
 export async function handleIngest(req: Request, deps: IngestDeps): Promise<Response> {
@@ -41,46 +50,53 @@ export async function handleIngest(req: Request, deps: IngestDeps): Promise<Resp
   }
   const { batch } = parsed;
 
-  try {
+  const leads: Parameters<IngestDeps["recordLead"]>[0][] = [];
+  const tokens: string[] = [];
+  const events = batch.events.map((e) => {
+    let props = e.props;
+    if (e.type === "lead_submitted") {
+      const p = e.props ?? {};
+      const phone_raw = str(p.phone);
+      const given = str(p.lead_token);
+      const lead_token = given && UUID_RE.test(given) ? given : crypto.randomUUID();
+      leads.push({
+        env: batch.env,
+        phone_e164: normalizePhoneBR(phone_raw),
+        phone_raw,
+        name: str(p.name),
+        email: str(p.email),
+        session_id: batch.session_id,
+        visitor_id: batch.visitor_id,
+        lead_token,
+      });
+      props = { ...p, lead_token };
+    } else if (e.type === "whatsapp_click") {
+      const t = str(e.props?.lead_token);
+      if (t) tokens.push(t);
+    }
+    return props ? { ...e, props: scrubPii(props) } : e;
+  });
+
+  // Cada etapa é isolada: uma falha é logada e as demais continuam.
+  const stage = async (label: string, fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch (err) {
+      console.error(`ingest ${label} failed`, err);
+    }
+  };
+
+  let ipHash = "";
+  const ua = req.headers.get("user-agent");
+  await stage("hash", async () => {
     const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
-    const ipHash = await sha256Hex(ip + deps.ipSalt + now.toISOString().slice(0, 10));
-    const userAgent = req.headers.get("user-agent");
-    await deps.upsertSession(batch, ipHash, isBot(userAgent), userAgent);
-    if (batch.visitor_id) await deps.upsertVisitor(batch);
-
-    const leads: Parameters<IngestDeps["recordLead"]>[0][] = [];
-    const tokens: string[] = [];
-    const events = batch.events.map((e) => {
-      if (e.type === "lead_submitted") {
-        const p = e.props ?? {};
-        const phone_raw = str(p.phone);
-        const lead_token = str(p.lead_token) ?? crypto.randomUUID();
-        leads.push({
-          env: batch.env,
-          phone_e164: normalizePhoneBR(phone_raw),
-          phone_raw,
-          name: str(p.name),
-          email: str(p.email),
-          session_id: batch.session_id,
-          visitor_id: batch.visitor_id,
-          lead_token,
-        });
-        // PII nunca vai para events.props
-        const { name: _n, phone: _p, email: _e, ...safe } = p;
-        return { ...e, props: { ...safe, lead_token } };
-      }
-      if (e.type === "whatsapp_click") {
-        const t = str(e.props?.lead_token);
-        if (t) tokens.push(t);
-      }
-      return e;
-    });
-
-    if (events.length > 0) await deps.insertEvents(batch, events);
-    for (const lead of leads) await deps.recordLead(lead);
-    for (const t of tokens) await deps.markWhatsapp(t);
-  } catch (err) {
-    console.error("ingest failed", err);
-  }
+    ipHash = await sha256Hex(ip + deps.ipSalt + now.toISOString().slice(0, 10));
+  });
+  // visitors antes de sessions (FK sessions.visitor_id -> visitors)
+  if (batch.visitor_id) await stage("upsertVisitor", () => deps.upsertVisitor(batch));
+  await stage("upsertSession", () => deps.upsertSession(batch, ipHash, isBot(ua), ua));
+  if (events.length > 0) await stage("insertEvents", () => deps.insertEvents(batch, events));
+  for (const lead of leads) await stage("recordLead", () => deps.recordLead(lead));
+  for (const t of tokens) await stage("markWhatsapp", () => deps.markWhatsapp(t));
   return new Response(null, { status: 204, headers: cors });
 }

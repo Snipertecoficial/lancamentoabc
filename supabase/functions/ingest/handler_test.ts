@@ -82,7 +82,7 @@ Deno.test("lead_submitted: recordLead com telefone normalizado e evento sem PII"
   assertEquals(calls.recordLead[0].lead_token, TOKEN);
   assertEquals(calls.recordLead[0].session_id, SID);
   assertEquals(Object.keys(calls.insertEvents[0][0].props!).sort(), ["form_id", "lead_token"]);
-  assertEquals(calls.order, ["session", "visitor", "events", "lead"]);
+  assertEquals(calls.order, ["visitor", "session", "events", "lead"]);
 });
 
 Deno.test("ipHash: sha256 de ip + salt + data UTC; bot detectado", async () => {
@@ -172,4 +172,76 @@ Deno.test("lead_submitted sem lead_token: token gerado vai para recordLead e par
   assertEquals(token.length > 0, true);
   assertEquals(calls.insertEvents[0][0].props!.lead_token, token);
   assertEquals(Object.keys(calls.insertEvents[0][0].props!).sort(), ["form_id", "lead_token"]);
+});
+
+async function quiet<T>(f: () => Promise<T>): Promise<T> {
+  const orig = console.error;
+  console.error = () => {};
+  try {
+    return await f();
+  } finally {
+    console.error = orig;
+  }
+}
+
+Deno.test("insertEvents lança: recordLead ainda é chamado", async () => {
+  const { deps, calls } = fakeDeps();
+  const d: IngestDeps = { ...deps, insertEvents: () => Promise.reject(new Error("boom")) };
+  const res = await quiet(() => handleIngest(post(batch([leadEvent])), d));
+  assertEquals(res.status, 204);
+  assertEquals(calls.recordLead.length, 1);
+});
+
+Deno.test("upsertSession e upsertVisitor lançam: eventos, leads e whatsapp ainda rodam", async () => {
+  const { deps, calls } = fakeDeps();
+  const d: IngestDeps = {
+    ...deps,
+    upsertSession: () => Promise.reject(new Error("s")),
+    upsertVisitor: () => Promise.reject(new Error("v")),
+  };
+  const wa = { id: evId(2), type: "whatsapp_click", ts: nowIso(), props: { lead_token: TOKEN } };
+  const res = await quiet(() => handleIngest(post(batch([leadEvent, wa])), d));
+  assertEquals(res.status, 204);
+  assertEquals(calls.insertEvents.length, 1);
+  assertEquals(calls.recordLead.length, 1);
+  assertEquals(calls.markWhatsapp, [TOKEN]);
+});
+
+Deno.test("primeiro recordLead lança: segundo lead e markWhatsapp continuam", async () => {
+  const { deps, calls } = fakeDeps();
+  const T2 = "44444444-4444-4444-8444-444444444444";
+  let n = 0;
+  const d: IngestDeps = {
+    ...deps,
+    recordLead: (a) => {
+      if (n++ === 0) return Promise.reject(new Error("boom"));
+      return deps.recordLead(a);
+    },
+  };
+  const lead2 = { ...leadEvent, id: evId(2), props: { ...leadEvent.props, lead_token: T2 } };
+  const wa = { id: evId(3), type: "whatsapp_click", ts: nowIso(), props: { lead_token: TOKEN } };
+  const res = await quiet(() => handleIngest(post(batch([leadEvent, lead2, wa])), d));
+  assertEquals(res.status, 204);
+  assertEquals(calls.recordLead.map((l) => l.lead_token), [T2]);
+  assertEquals(calls.markWhatsapp, [TOKEN]);
+});
+
+Deno.test("PII é removida de props de qualquer evento", async () => {
+  const { deps, calls } = fakeDeps();
+  const ev = {
+    id: evId(1), type: "form_field_complete", ts: nowIso(),
+    props: { field: "email", Email: "a@x.com", telefone: "11999999999", Nome: "x", "E-mail": "a@x.com", celular: "1", mobile_phone: "1", phone_raw: "1" },
+  };
+  await handleIngest(post(batch([ev])), deps);
+  assertEquals(calls.insertEvents[0][0].props, { field: "email" });
+});
+
+Deno.test("lead_token inválido do cliente é tratado como ausente", async () => {
+  const { deps, calls } = fakeDeps();
+  const ev = { ...leadEvent, props: { ...leadEvent.props, lead_token: "not-a-uuid" } };
+  await handleIngest(post(batch([ev])), deps);
+  const token = calls.recordLead[0].lead_token;
+  assertEquals(token === "not-a-uuid", false);
+  assertEquals(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token), true);
+  assertEquals(calls.insertEvents[0][0].props!.lead_token, token);
 });
