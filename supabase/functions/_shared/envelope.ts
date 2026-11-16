@@ -1,3 +1,5 @@
+import { UUID_RE } from "./uuid.ts";
+
 export const EVENT_TYPES = [
   "page_view", "scroll_depth", "section_view", "cta_click", "whatsapp_click", "rage_click",
   "video", "faq_open", "slider_view", "form_view", "form_start", "form_field_complete",
@@ -32,7 +34,6 @@ export type Batch = {
 const MAX_BYTES = 65536;
 const MAX_EVENTS = 50;
 const MAX_FUTURE_MS = 24 * 3600_000;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TYPES = new Set<string>(EVENT_TYPES);
 
 const isObj = (x: unknown): x is Record<string, unknown> =>

@@ -1,3 +1,4 @@
+import { UUID_RE } from "../_shared/uuid.ts";
 import type { Batch, RadarEvent } from "../_shared/envelope.ts";
 import { parseBatch } from "../_shared/envelope.ts";
 import { normalizePhoneBR } from "../_shared/phone.ts";
@@ -24,7 +25,6 @@ export type IngestDeps = {
   ipSalt: string;
 };
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PII_KEYS = new Set([
   "name", "nome", "phone", "telefone", "celular", "mobile_phone", "phone_raw", "email", "e-mail",
 ]);

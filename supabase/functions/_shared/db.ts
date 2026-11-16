@@ -125,5 +125,13 @@ export function createDb(url: string, serviceRoleKey: string) {
     async markWhatsapp(token: string): Promise<void> {
       check((await sb.rpc("mark_lead_whatsapp", { p_token: token })).error);
     },
+
+    async consumeLeadToken(token: string): Promise<
+      { first_use: boolean; phone_e164: string | null; email: string | null } | null
+    > {
+      const { data, error } = await sb.rpc("consume_lead_token", { p_token: token });
+      check(error);
+      return (data as { first_use: boolean; phone_e164: string | null; email: string | null }[] | null)?.[0] ?? null;
+    },
   };
 }
