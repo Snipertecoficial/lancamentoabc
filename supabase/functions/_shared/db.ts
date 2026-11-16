@@ -26,7 +26,7 @@ export function createDb(url: string, serviceRoleKey: string) {
   };
 
   return {
-    async upsertSession(b: Batch, ipHash: string, isBot: boolean) {
+    async upsertSession(b: Batch, ipHash: string, isBot: boolean, userAgent: string | null) {
       const now = new Date().toISOString();
       const s = b.session;
       // 1) cria na primeira vez (started_at = 1º evento); no conflito não altera nada
@@ -54,7 +54,7 @@ export function createDb(url: string, serviceRoleKey: string) {
         device: s.device ?? null,
         screen: s.screen ?? null,
         lang: s.lang ?? null,
-        user_agent: null,
+        user_agent: userAgent,
         ip_hash: ipHash,
         is_bot: isBot,
       }, { onConflict: "id", ignoreDuplicates: true })).error);

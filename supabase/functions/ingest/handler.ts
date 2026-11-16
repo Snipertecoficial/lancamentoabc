@@ -6,7 +6,7 @@ import { isBot } from "../_shared/bot.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
 export type IngestDeps = {
-  upsertSession(b: Batch, ipHash: string, isBot: boolean): Promise<void>;
+  upsertSession(b: Batch, ipHash: string, isBot: boolean, userAgent: string | null): Promise<void>;
   upsertVisitor(b: Batch): Promise<void>;
   insertEvents(b: Batch, events: RadarEvent[]): Promise<void>;
   recordLead(args: {
@@ -44,7 +44,8 @@ export async function handleIngest(req: Request, deps: IngestDeps): Promise<Resp
   try {
     const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
     const ipHash = await sha256Hex(ip + deps.ipSalt + now.toISOString().slice(0, 10));
-    await deps.upsertSession(batch, ipHash, isBot(req.headers.get("user-agent")));
+    const userAgent = req.headers.get("user-agent");
+    await deps.upsertSession(batch, ipHash, isBot(userAgent), userAgent);
     if (batch.visitor_id) await deps.upsertVisitor(batch);
 
     const leads: Parameters<IngestDeps["recordLead"]>[0][] = [];
@@ -66,7 +67,7 @@ export async function handleIngest(req: Request, deps: IngestDeps): Promise<Resp
         });
         // PII nunca vai para events.props
         const { name: _n, phone: _p, email: _e, ...safe } = p;
-        return { ...e, props: safe };
+        return { ...e, props: { ...safe, lead_token } };
       }
       if (e.type === "whatsapp_click") {
         const t = str(e.props?.lead_token);

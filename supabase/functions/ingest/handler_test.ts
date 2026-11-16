@@ -19,9 +19,9 @@ function fakeDeps() {
     order: [] as string[],
   };
   const deps: IngestDeps = {
-    upsertSession: (b, ipHash, bot) => {
+    upsertSession: (b, ipHash, bot, ua) => {
       calls.order.push("session");
-      calls.upsertSession.push([b, ipHash, bot]);
+      calls.upsertSession.push([b, ipHash, bot, ua]);
       return Promise.resolve();
     },
     upsertVisitor: (b) => {
@@ -155,4 +155,21 @@ Deno.test("POST de origem permitida devolve CORS no 204", async () => {
   const res = await handleIngest(post(batch([]), { origin: ORIGIN }), deps);
   assertEquals(res.status, 204);
   assertEquals(res.headers.get("access-control-allow-origin"), ORIGIN);
+});
+
+Deno.test("user-agent do request chega em upsertSession", async () => {
+  const { deps, calls } = fakeDeps();
+  await handleIngest(post(batch([]), { "user-agent": "Mozilla/5.0 (iPhone) Teste" }), deps);
+  assertEquals(calls.upsertSession[0][3], "Mozilla/5.0 (iPhone) Teste");
+});
+
+Deno.test("lead_submitted sem lead_token: token gerado vai para recordLead e para props do evento", async () => {
+  const { deps, calls } = fakeDeps();
+  const { lead_token: _t, ...noToken } = leadEvent.props;
+  await handleIngest(post(batch([{ ...leadEvent, props: noToken }])), deps);
+  const token = calls.recordLead[0].lead_token;
+  assertEquals(typeof token, "string");
+  assertEquals(token.length > 0, true);
+  assertEquals(calls.insertEvents[0][0].props!.lead_token, token);
+  assertEquals(Object.keys(calls.insertEvents[0][0].props!).sort(), ["form_id", "lead_token"]);
 });
