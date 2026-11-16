@@ -12,11 +12,11 @@ declare
   vb1 uuid := '00000000-0000-0000-0000-0000000000b1';
   vb2 uuid := '00000000-0000-0000-0000-0000000000b2';
   tc1 uuid := '00000000-0000-0000-0000-0000000000c1';
-  l1 uuid; l2 uuid; l_mail uuid; l_up uuid; l_ghost uuid; l_rd uuid; l_rd_exist uuid;
+  l1 uuid; l2 uuid; l_mail uuid; l_up uuid; l_ghost uuid; l_rd uuid; l_rd_exist uuid; l_a uuid; l_b uuid;
   st_null1 text; st_null2 text;
 begin
   begin
-    out := out || extensions.plan(26);
+    out := out || extensions.plan(30);
 
     -- setup: 3 sessions, 2 visitors, 4 events before the lead exists
     insert into public.visitors(id, env, first_seen_at, last_seen_at) values (vb1, 'staging', now(), now()), (vb2, 'staging', now(), now());
@@ -92,6 +92,14 @@ begin
     begin perform public.confirm_rd_lead(null, null, 'Ninguem', null); st_null2 := 'none';
     exception when others then st_null2 := sqlstate; end;
     out := out || extensions.is(st_null2, '22023', 'confirm_rd_lead sem telefone e sem e-mail levanta exceção');
+
+    -- same e-mail, different phone: must NOT merge into the lead that already has another phone
+    l_a := public.record_lead('staging', '+5511900000001', '(11) 90000-0001', 'Ana', 'ana@x.com', null, null, null);
+    l_b := public.record_lead('staging', '+5511900000002', '(11) 90000-0002', null, 'ana@x.com', null, null, null);
+    out := out || extensions.isnt(l_b, l_a, 'mesmo e-mail + telefone diferente = lead distinto');
+    out := out || extensions.is((select phone_e164 from public.leads where id = l_a), '+5511900000001', 'lead original mantém phone_e164');
+    out := out || extensions.is((select phone_raw from public.leads where id = l_a), '(11) 90000-0001', 'lead original mantém phone_raw');
+    out := out || extensions.is((select phone_raw from public.leads where id = l_b), '(11) 90000-0002', 'novo lead tem o phone_raw do novo telefone');
 
     -- privileges
     out := out || extensions.is(
