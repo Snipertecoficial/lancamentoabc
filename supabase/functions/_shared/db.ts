@@ -133,5 +133,32 @@ export function createDb(url: string, serviceRoleKey: string) {
       check(error);
       return (data as { first_use: boolean; phone_e164: string | null; email: string | null }[] | null)?.[0] ?? null;
     },
+
+    async storeRdRaw(payload: unknown): Promise<number> {
+      const { data, error } = await sb.from("rd_webhook_raw").insert({ payload }).select("id").single();
+      check(error);
+      return (data as { id: number }).id;
+    },
+
+    async finishRdRaw(rawId: number, ids: string[], error: string | null): Promise<void> {
+      check((await sb.from("rd_webhook_raw")
+        .update({ matched_lead_ids: ids, error }).eq("id", rawId)).error);
+    },
+
+    async confirmRdLead(lead: {
+      phone_e164: string | null;
+      email: string | null;
+      name: string | null;
+      rd_lead_id: string | null;
+    }): Promise<string> {
+      const { data, error } = await sb.rpc("confirm_rd_lead", {
+        p_phone_e164: lead.phone_e164,
+        p_email: lead.email,
+        p_name: lead.name,
+        p_rd_lead_id: lead.rd_lead_id,
+      });
+      check(error);
+      return data as string;
+    },
   };
 }

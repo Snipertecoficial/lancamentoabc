@@ -1,0 +1,57 @@
+{
+  "leads": [
+    {
+      "id": "7254031",
+      "email": "maria.silva@example.com",
+      "name": "Maria Silva",
+      "company": null,
+      "job_title": null,
+      "bio": null,
+      "public_url": "https://app.rdstation.com.br/leads/public/abc123",
+      "created_at": "2026-11-16T14:03:11.000-03:00",
+      "opportunity": "true",
+      "number_conversions": "1",
+      "user": "marketing@example.com",
+      "first_conversion": {
+        "content": {
+          "identificador": "lp-espontone-padan",
+          "nome": "Maria Silva",
+          "email_lead": "maria.silva@example.com",
+          "telefone": "(11) 94038-3680"
+        },
+        "created_at": "2026-11-16T14:03:11.000-03:00",
+        "cumulative_sum": "1",
+        "source": "lp-espontone-padan",
+        "conversion_origin": {
+          "source": "Google",
+          "medium": "cpc",
+          "campaign": "espontone",
+          "channel": "Paid Search"
+        }
+      },
+      "last_conversion": {
+        "content": {
+          "identificador": "lp-espontone-padan",
+          "nome": "Maria Silva",
+          "email_lead": "maria.silva@example.com",
+          "telefone": "(11) 94038-3680"
+        },
+        "created_at": "2026-11-16T14:03:11.000-03:00",
+        "cumulative_sum": "1",
+        "source": "lp-espontone-padan"
+      },
+      "custom_fields": {
+        "Interesse": "2 dormitorios"
+      },
+      "website": null,
+      "personal_phone": null,
+      "mobile_phone": "(11) 94038-3680",
+      "city": "Sao Paulo",
+      "state": "SP",
+      "lead_stage": "Lead",
+      "tags": ["lp-espontone-padan"],
+      "fit_score": "d",
+      "interest": 0
+    }
+  ]
+}
