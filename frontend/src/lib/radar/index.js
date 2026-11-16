@@ -1,6 +1,6 @@
 import { RADAR_URL, RADAR_ENV } from "./config";
 import { uuid, getSessionId, getVisitorId } from "./ids";
-import { hasConsent } from "./consent";
+import { hasConsent, onConsentChange } from "./consent";
 import { readAttribution } from "./attribution";
 import { createQueue } from "./queue";
 import { sendBatch } from "./transport";
@@ -13,6 +13,7 @@ import * as forms from "./collectors/forms";
 const ATTR_KEY = "rdr_attr";
 const LEAD_KEY = "radar_lead_token";
 let inited = false;
+let consentOverride = null; // set by the radar:consent event so the decision applies to the very next batch
 
 function sessionMeta() {
   try {
@@ -31,7 +32,7 @@ const queue = createQueue({
       v: 1,
       env: RADAR_ENV,
       session_id: getSessionId(),
-      visitor_id: getVisitorId(hasConsent()),
+      visitor_id: getVisitorId(consentOverride === null ? hasConsent() : consentOverride),
       session: sessionMeta(),
       events,
     });
@@ -51,6 +52,7 @@ export function initRadar() {
   [page, sections, clicks, video, forms].forEach((c) => {
     try { stops.push(c.start(track, identifyLead)); } catch (e) { /* ignore */ }
   });
+  try { stops.push(onConsentChange((granted) => { consentOverride = granted; })); } catch (e) { /* ignore */ }
   try {
     const onHide = () => queue.flush(true);
     const onVis = () => { if (document.visibilityState === "hidden") queue.flush(true); };
@@ -68,6 +70,7 @@ export function __stopRadar() {
   stops.forEach((f) => { try { f(); } catch (e) { /* ignore */ } });
   stops = [];
   inited = false;
+  consentOverride = null;
 }
 
 export function track(type, props, opts) {

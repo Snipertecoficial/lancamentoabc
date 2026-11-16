@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { updateGoogleConsent } from "@/lib/tracking";
+import { track } from "@/lib/radar";
+
+const notifyRadar = (granted) => {
+  try {
+    window.dispatchEvent(new CustomEvent("radar:consent", { detail: { granted } }));
+    track("consent", { granted });
+  } catch (e) { /* tracking never blocks the user */ }
+};
 
 const CookieConsent = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -19,12 +27,14 @@ const CookieConsent = () => {
   const handleAccept = () => {
     localStorage.setItem("lgpd-consent", "granted");
     updateGoogleConsent(true);
+    notifyRadar(true);
     setIsVisible(false);
   };
 
   const handleReject = () => {
     localStorage.setItem("lgpd-consent", "denied");
     updateGoogleConsent(false);
+    notifyRadar(false);
     setIsVisible(false);
   };
 

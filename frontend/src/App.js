@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
+import { initRadar } from "@/lib/radar";
 
 // Lazy loaded components (below the fold)
 const FAQ = lazy(() => import("@/components/FAQ"));
@@ -50,6 +51,10 @@ const Home = () => {
 };
 
 function App() {
+  useEffect(() => {
+    initRadar(); // idempotent (safe under StrictMode); no-op without REACT_APP_RADAR_URL
+  }, []);
+
   return (
     <div className="App">
       <BrowserRouter>

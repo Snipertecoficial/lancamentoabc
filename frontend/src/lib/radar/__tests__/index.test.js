@@ -129,3 +129,34 @@ test("form_abandon is enqueued before the pagehide flush and lands in the beacon
   expect(b.events.find((e) => e.type === "form_abandon").props).toEqual({ last_field: "email" });
   document.body.innerHTML = "";
 });
+
+describe("radar:consent event", () => {
+  const consent = (granted) => window.dispatchEvent(new CustomEvent("radar:consent", { detail: { granted } }));
+  const flushBatch = async (n) => {
+    window.dispatchEvent(new Event("pagehide"));
+    return JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[n][1]));
+  };
+
+  test("granted: the very next batch carries a non-null visitor_id", async () => {
+    const r = load("https://r.test/fn");
+    r.initRadar();
+    consent(true);
+    expect((await flushBatch(0)).visitor_id).toMatch(UUID);
+  });
+
+  test("denied: the very next batch carries a null visitor_id, even if storage still says granted", async () => {
+    localStorage.setItem("lgpd-consent", "granted");
+    const r = load("https://r.test/fn");
+    r.initRadar();
+    consent(false);
+    expect((await flushBatch(0)).visitor_id).toBeNull();
+  });
+
+  test("granted then denied flips back to null", async () => {
+    const r = load("https://r.test/fn");
+    r.initRadar();
+    consent(true);
+    consent(false);
+    expect((await flushBatch(0)).visitor_id).toBeNull();
+  });
+});
