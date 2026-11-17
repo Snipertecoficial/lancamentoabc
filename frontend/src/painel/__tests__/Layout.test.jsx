@@ -13,7 +13,7 @@ jest.mock("react-router-dom", () => ({
 }), { virtual: true });
 
 const mockSignOut = jest.fn(() => Promise.resolve());
-jest.mock("../auth", () => ({ signOut: () => mockSignOut() }));
+jest.mock("../auth", () => ({ signOut: (...a) => mockSignOut(...a) }));
 jest.mock("../RequireAdmin", () => ({ useAdminUser: () => ({ email: "dono@x.com" }) }));
 
 const Layout = require("../Layout").default;
@@ -64,10 +64,10 @@ test("mobile menu opens and closes with Escape", async () => {
   expect(container.querySelector('[role="dialog"]')).toBeNull();
 });
 
-test("Sair signs out and goes to /login", async () => {
+test("Sair signs out everywhere (global) and goes to /login", async () => {
   await mount();
   const sair = [...container.querySelectorAll("button")].find((b) => b.textContent === "Sair");
   await act(async () => { sair.click(); });
-  expect(mockSignOut).toHaveBeenCalled();
+  expect(mockSignOut).toHaveBeenCalledWith("global");
   expect(mockNavigate).toHaveBeenCalledWith("/login", { replace: true });
 });

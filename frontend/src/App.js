@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { initRadar } from "@/lib/radar";
 
 // Lazy loaded components (below the fold)
@@ -62,14 +63,16 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <Suspense fallback={<div className="min-h-screen bg-[#0A1930]" />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/obrigado" element={<ThankYou />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/painel/*" element={<PainelApp />} />
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<div className="min-h-screen bg-[#0A1930]" />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/obrigado" element={<ThankYou />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/painel/*" element={<PainelApp />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </div>
   );

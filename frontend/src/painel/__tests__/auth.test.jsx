@@ -72,9 +72,11 @@ describe("signIn", () => {
   });
 });
 
-test("signOut delegates to supabase", async () => {
+test("signOut is local by default (forced sign-out) and global on request (Sair)", async () => {
   await signOut();
-  expect(mockAuth.signOut).toHaveBeenCalled();
+  expect(mockAuth.signOut).toHaveBeenLastCalledWith({ scope: "local" });
+  await signOut("global");
+  expect(mockAuth.signOut).toHaveBeenLastCalledWith({ scope: "global" });
 });
 
 describe("useAdminSession", () => {
@@ -139,5 +141,53 @@ describe("useAdminSession", () => {
     expect(status()).toBe("admin");
     await act(async () => { authListener("SIGNED_OUT", null); });
     expect(status()).toBe("anon");
+  });
+  const tick = () => new Promise((r) => setTimeout(r, 5));
+  async function mountAdmin(email = "dono@x.com") {
+    mockAuth.getSession.mockResolvedValue({ data: { session: { user: { email } } }, error: null });
+    mockRpc.mockResolvedValue({ data: true, error: null });
+    await mount();
+    expect(status()).toBe("admin");
+    mockRpc.mockClear();
+  }
+
+  test("TOKEN_REFRESHED re-checks is_admin (deferred, not inside the callback); false -> denied + signOut", async () => {
+    await mountAdmin();
+    mockRpc.mockResolvedValue({ data: false, error: null });
+    await act(async () => {
+      authListener("TOKEN_REFRESHED", { user: { email: "dono@x.com" } });
+      expect(mockRpc).not.toHaveBeenCalled(); // deferred with setTimeout(0): supabase-js deadlock caveat
+      await tick();
+    });
+    expect(mockRpc).toHaveBeenCalledWith("is_admin");
+    expect(status()).toBe("denied");
+    expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  test("USER_UPDATED with is_admin error -> denied + signOut (fail closed)", async () => {
+    await mountAdmin();
+    mockRpc.mockResolvedValue({ data: null, error: { message: "x" } });
+    await act(async () => { authListener("USER_UPDATED", { user: { email: "dono@x.com" } }); await tick(); });
+    expect(status()).toBe("denied");
+    expect(mockAuth.signOut).toHaveBeenCalled();
+  });
+
+  test("SIGNED_IN as a different admin user (other tab) -> user updated", async () => {
+    await mountAdmin("dono@x.com");
+    mockRpc.mockResolvedValue({ data: true, error: null });
+    await act(async () => { authListener("SIGNED_IN", { user: { email: "outro@x.com" } }); await tick(); });
+    expect(mockRpc).toHaveBeenCalledWith("is_admin");
+    expect(status()).toBe("admin");
+    expect(container.textContent).toBe("outro@x.com");
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
+  });
+
+  test("a deferred re-check does not run after unmount", async () => {
+    await mountAdmin();
+    authListener("TOKEN_REFRESHED", { user: {} });
+    await act(async () => { root.unmount(); });
+    await tick();
+    expect(mockRpc).not.toHaveBeenCalled();
+    root = createRoot(container); // afterEach unmounts again
   });
 });

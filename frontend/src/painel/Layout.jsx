@@ -107,7 +107,7 @@ export default function Layout() {
   }, [menuOpen]);
 
   const onSignOut = async () => {
-    await signOut();
+    await signOut("global");
     navigate("/login", { replace: true });
   };
 

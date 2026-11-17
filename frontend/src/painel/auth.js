@@ -23,8 +23,10 @@ async function checkAdmin() {
   return data === true;
 }
 
-export async function signOut() {
-  try { await supabase.auth.signOut({ scope: "local" }); } catch (e) { /* session is gone either way */ }
+// "local" ends only this browser's session (forced sign-out of a non-admin); the "Sair" button
+// passes "global" to end the account's sessions everywhere.
+export async function signOut(scope = "local") {
+  try { await supabase.auth.signOut({ scope }); } catch (e) { /* session is gone either way */ }
 }
 
 export async function signIn(email, password) {
@@ -46,6 +48,9 @@ export async function signIn(email, password) {
   return { ok: false, error: MSG.denied };
 }
 
+// Events that carry a (possibly different or changed) session: the admin check is re-run for them.
+const RECHECK = ["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"];
+
 // status: "loading" | "anon" | "denied" | "admin". A signed-in non-admin is signed out on the spot.
 export function useAdminSession() {
   const [state, setState] = useState({ status: "loading", user: null });
@@ -53,7 +58,21 @@ export function useAdminSession() {
   useEffect(() => {
     let alive = true;
     let denied = false;
+    const timers = [];
     const set = (s) => { if (alive) setState(s); };
+
+    async function verify(session) {
+      if (!alive) return;
+      let admin = false;
+      try { admin = await checkAdmin(); } catch (e) { /* fail closed */ }
+      if (admin) {
+        denied = false;
+        return set({ status: "admin", user: session.user });
+      }
+      denied = true; // set before signOut so its SIGNED_OUT event does not turn this into "anon"
+      set({ status: "denied", user: null });
+      await signOut();
+    }
 
     (async () => {
       let session = null;
@@ -62,19 +81,20 @@ export function useAdminSession() {
         session = (r && r.data && r.data.session) || null;
       } catch (e) { /* treated as signed out */ }
       if (!session) return set({ status: "anon", user: null });
-      let admin = false;
-      try { admin = await checkAdmin(); } catch (e) { /* fail closed */ }
-      if (admin) return set({ status: "admin", user: session.user });
-      denied = true; // set before signOut so its SIGNED_OUT event does not turn this into "anon"
-      set({ status: "denied", user: null });
-      await signOut();
+      await verify(session);
     })();
 
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT" && !denied) set({ status: "anon", user: null });
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        if (!denied) set({ status: "anon", user: null });
+      } else if (session && RECHECK.includes(event)) {
+        // Deferred: awaiting another supabase call inside this callback can deadlock supabase-js.
+        timers.push(setTimeout(() => { verify(session); }, 0));
+      }
     });
     return () => {
       alive = false;
+      timers.forEach(clearTimeout);
       data.subscription.unsubscribe();
     };
   }, []);
