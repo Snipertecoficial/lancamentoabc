@@ -122,6 +122,18 @@ export function createDb(url: string, serviceRoleKey: string) {
       return data as string;
     },
 
+    /** Envios `lead_submitted` na última hora de sessões com o mesmo ip_hash (rate limit). */
+    async countRecentLeadSubmissions(ipHash: string): Promise<number> {
+      const since = new Date(Date.now() - 3600_000).toISOString();
+      const { count, error } = await sb.from("events")
+        .select("id, sessions!inner(ip_hash)", { count: "exact", head: true })
+        .eq("type", "lead_submitted")
+        .gte("occurred_at", since)
+        .eq("sessions.ip_hash", ipHash);
+      check(error);
+      return count ?? 0;
+    },
+
     async markWhatsapp(token: string): Promise<void> {
       check((await sb.rpc("mark_lead_whatsapp", { p_token: token })).error);
     },

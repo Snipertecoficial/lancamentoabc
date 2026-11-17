@@ -2,7 +2,7 @@ import { UUID_RE } from "../_shared/uuid.ts";
 import type { Batch, RadarEvent } from "../_shared/envelope.ts";
 import { parseBatch } from "../_shared/envelope.ts";
 import { normalizePhoneBR } from "../_shared/phone.ts";
-import { sha256Hex } from "../_shared/hash.ts";
+import { ipHashOf } from "../_shared/ip.ts";
 import { isBot } from "../_shared/bot.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -89,8 +89,7 @@ export async function handleIngest(req: Request, deps: IngestDeps): Promise<Resp
   let ipHash = "";
   const ua = req.headers.get("user-agent");
   await stage("hash", async () => {
-    const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
-    ipHash = await sha256Hex(ip + deps.ipSalt + now.toISOString().slice(0, 10));
+    ipHash = await ipHashOf(req, deps.ipSalt, now);
   });
   // visitors antes de sessions (FK sessions.visitor_id -> visitors)
   if (batch.visitor_id) await stage("upsertVisitor", () => deps.upsertVisitor(batch));
