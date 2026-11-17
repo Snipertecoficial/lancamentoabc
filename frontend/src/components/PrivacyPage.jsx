@@ -60,15 +60,15 @@ const PrivacyPage = () => {
             "interações com o vídeo",
             "origem do acesso e campanha de anúncio que trouxe você",
             "tipo de dispositivo, navegador e tamanho de tela",
-            "endereço IP, guardado apenas de forma embaralhada (hash), para fins de segurança; não guardamos o IP em formato legível",
+            "endereço IP, usado apenas de forma embaralhada (hash) para fins de segurança; não guardamos o seu IP em formato legível no nosso banco de dados",
           ]} />
         </Section>
 
         <Section title="3. Cookies e tecnologias semelhantes">
           <List items={[
-            "Radar (sistema próprio): usa um identificador do navegador para ligar as visitas de um mesmo visitante. Só é ativado se você aceitar os cookies.",
-            "Google Tag Manager, Google Analytics e Google Ads: medem o uso da página e o desempenho dos anúncios.",
-            "Microsoft Clarity: registra de forma agregada como a página é usada (por exemplo, mapas de cliques e rolagem) para melhorarmos a experiência.",
+            "Radar (sistema próprio): antes de você escolher, ou depois de recusar, registramos a navegação de forma anônima, sem identificador persistente. Se você aceitar, passamos a usar um identificador do navegador para ligar as visitas de um mesmo visitante; se recusar, esse identificador é removido.",
+            "Google Tag Manager, Google Analytics e Google Ads: medem o uso da página e o desempenho dos anúncios. Se você recusar, essas ferramentas funcionam em modo de consentimento, sem armazenar cookies ou identificadores no seu navegador.",
+            "Microsoft Clarity: carregado pelo gerenciador de tags e, quando ativado, serve para entender de forma agregada como a página é usada (mapas de cliques e rolagem).",
           ]} />
         </Section>
 
@@ -96,6 +96,10 @@ const PrivacyPage = () => {
             "Hostgator: hospedagem da página",
             "Google e Microsoft: métricas e anúncios",
           ]} />
+          <p>
+            Para medir conversões de anúncios, dados de contato protegidos por hash (um resumo criptográfico SHA-256,
+            que não pode ser lido) podem ser enviados ao Google.
+          </p>
           <p>Não vendemos seus dados pessoais.</p>
         </Section>
 
@@ -119,15 +123,18 @@ const PrivacyPage = () => {
           <p>
             Para exercer qualquer desses direitos, escreva para{" "}
             <a className="text-[#7DB4E8] underline" href={`mailto:${EMAIL}`}>{EMAIL}</a>.
-            Responderemos o mais breve possível.
+            Responderemos em até 15 dias.
+          </p>
+          <p>
+            Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).
           </p>
         </Section>
 
         <Section title="9. Escolhas sobre cookies">
           <p>
             Ao abrir a página, mostramos um aviso para você aceitar ou recusar os cookies. Se você recusar, o
-            identificador do Radar é removido do seu navegador e as ferramentas de medição e anúncios ficam
-            desativadas. Você pode mudar de ideia apagando os dados do site no seu navegador, o que faz o aviso
+            identificador do Radar é removido do seu navegador e as ferramentas do Google funcionam em modo de
+            consentimento, sem armazenar cookies ou identificadores. Você pode mudar de ideia apagando os dados do site no seu navegador, o que faz o aviso
             aparecer de novo.
           </p>
         </Section>

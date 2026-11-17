@@ -32,6 +32,15 @@ test("PrivacyPage renders the key sections, controller data and contact e-mail",
     "Compartilhamento", "Por quanto tempo", "Seus direitos", "Escolhas sobre cookies",
     "Atualizações", "Última atualização: 17/11/2026", "Espontone Imóveis", "042656-J",
   ].forEach((s) => expect(text).toContain(s));
+  expect(text).not.toContain("desativadas");
+  expect(text).toContain("modo de consentimento, sem armazenar cookies ou identificadores");
+  expect(text).toContain("sem identificador persistente");
+  expect(text).toContain("quando ativado");
+  expect(text).toContain("SHA-256");
+  expect(text).toContain("não guardamos o seu IP em formato legível no nosso banco de dados");
+  expect(text).toContain("até 13 meses");
+  expect(text).toContain("em até 15 dias");
+  expect(text).toContain("ANPD");
   expect(container.querySelector('a[href="mailto:contato@espontone.com.br"]')).not.toBeNull();
   expect(container.querySelector('a[href="/"]')).not.toBeNull();
   expect(document.title).toMatch(/Privacidade/);
