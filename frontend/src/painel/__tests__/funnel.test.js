@@ -1,4 +1,4 @@
-import { FUNNEL_STEPS, sumFunnel, leadsPerDay, sortCampaigns } from "../lib/funnel";
+import { FUNNEL_STEPS, sumFunnel, leadsPerDay, sortCampaigns, aggregateCampaigns } from "../lib/funnel";
 
 const row = (o) => ({ visits: 0, watched_video: 0, reached_form: 0, started_form: 0, submitted: 0, thank_you: 0, whatsapp: 0, ...o });
 
@@ -70,4 +70,20 @@ test("campaigns sorted by leads desc, then visits desc, then name", () => {
     { utm_campaign: "d", leads: "2", visits: 80 },
   ]);
   expect(sorted.map((c) => c.utm_campaign)).toEqual(["a", "c", "d", "b", null]);
+});
+
+test("campaigns per day are summed per origin, campaign and keyword, with conversion %", () => {
+  const out = aggregateCampaigns([
+    { day: "2026-11-14", origin: "google_ads", utm_campaign: "a", keyword: "k1", visits: 30, leads: 1 },
+    { day: "2026-11-15", origin: "google_ads", utm_campaign: "a", keyword: "k1", visits: 10, leads: 1 },
+    { day: "2026-11-15", origin: "google_ads", utm_campaign: "a", keyword: "k2", visits: 5, leads: 1 },
+    { day: "2026-11-15", origin: "direct", utm_campaign: null, keyword: null, visits: 50, leads: 0 },
+    { day: "2026-11-16", origin: "direct", utm_campaign: null, keyword: null, visits: 50, leads: 0 },
+  ]);
+  expect(out).toEqual([
+    { origin: "google_ads", utm_campaign: "a", keyword: "k1", visits: 40, leads: 2, conversion_pct: 5 },
+    { origin: "google_ads", utm_campaign: "a", keyword: "k2", visits: 5, leads: 1, conversion_pct: 20 },
+    { origin: "direct", utm_campaign: null, keyword: null, visits: 100, leads: 0, conversion_pct: 0 },
+  ]);
+  expect(aggregateCampaigns([{ origin: "other", utm_campaign: "x", keyword: null, visits: 0, leads: 0 }])[0].conversion_pct).toBeNull();
 });

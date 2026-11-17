@@ -6,14 +6,13 @@ import { supabase } from "../supabase";
 import { useEnv } from "../EnvContext";
 import { relativeTimeBR } from "../lib/format";
 import { deviceLabel } from "../lib/timeline";
-import { liveOrigin, liveSection } from "../lib/live";
+import { liveSection } from "../lib/live";
 import OriginBadge from "../OriginBadge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const LIVE_POLL_MS = 10000;
-// landing_url is only read to tell the ad origin (click ids); it is never shown.
-const LIVE_COLUMNS = "id,started_at,last_event_at,landing_url,utm_source,utm_campaign,keyword,device,lead_id,current_section";
+const LIVE_COLUMNS = "id,started_at,last_event_at,origin,referrer_host,utm_campaign,keyword,device,lead_id,current_section";
 const DEVICE_ICONS = { mobile: Smartphone, desktop: Monitor, tablet: Tablet };
 const focusRing = "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8]";
 const clockFmt = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
@@ -36,17 +35,13 @@ function Pulse({ on }) {
 }
 
 function SessionCard({ s, now }) {
-  const origin = liveOrigin(s);
   const DeviceIcon = DEVICE_ICONS[s.device] || Smartphone;
   const device = capitalize(deviceLabel(s.device));
   const section = liveSection(s.current_section);
   return (
     <li className="flex min-w-0 flex-col rounded-xl border border-white/[0.06] bg-[#061224]/50 px-4 pb-3.5 pt-4">
       <div className="flex items-center justify-between gap-2">
-        <OriginBadge
-          origin={origin === "unpaid" ? "direct" : origin}
-          label={origin === "unpaid" ? "Orgânico ou direto" : undefined}
-        />
+        <OriginBadge origin={s.origin} />
         {s.lead_id && (
           <Link
             to={`/painel/leads/${s.lead_id}`}
@@ -58,7 +53,7 @@ function SessionCard({ s, now }) {
         )}
       </div>
       <p className={`mt-2.5 truncate text-[15px] leading-snug ${s.utm_campaign ? "font-medium text-white" : "text-[#8E8E8E]"}`} title={s.utm_campaign || undefined}>
-        {s.utm_campaign || "Sem campanha"}
+        {s.utm_campaign || (s.referrer_host ? `Veio de ${s.referrer_host}` : "Sem campanha")}
       </p>
       {s.keyword && <p className="mt-0.5 truncate text-[13px] text-[#8E8E8E]" title={s.keyword}>{`Palavra-chave: ${s.keyword}`}</p>}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-[#D5DBE2]">

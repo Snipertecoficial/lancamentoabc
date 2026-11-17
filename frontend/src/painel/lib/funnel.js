@@ -41,6 +41,20 @@ export function leadsPerDay(rows, fromDay, toDay) {
   return out;
 }
 
+// panel_campaigns_daily rows (one per day x origin x campaign x keyword) summed over the period,
+// with conversion % recomputed from the totals.
+export function aggregateCampaigns(rows) {
+  const groups = new Map();
+  (rows || []).forEach((r) => {
+    const key = JSON.stringify([r.origin, r.utm_campaign, r.keyword]);
+    const g = groups.get(key) || { origin: r.origin, utm_campaign: r.utm_campaign, keyword: r.keyword, visits: 0, leads: 0 };
+    g.visits += n(r.visits);
+    g.leads += n(r.leads);
+    groups.set(key, g);
+  });
+  return sortCampaigns([...groups.values()].map((g) => ({ ...g, conversion_pct: g.visits ? (g.leads / g.visits) * 100 : null })));
+}
+
 export function sortCampaigns(rows) {
   return (rows || []).slice().sort((a, b) => n(b.leads) - n(a.leads)
     || n(b.visits) - n(a.visits)

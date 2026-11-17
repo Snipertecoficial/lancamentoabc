@@ -51,12 +51,12 @@ beforeEach(() => {
     {
       id: "s-ads", started_at: ago(12 * MIN), last_event_at: ago(2 * MIN),
       landing_url: "https://lancamento.espontone.com.br/?gclid=SECRET-GCLID-123&utm_source=google",
-      utm_source: "google", utm_campaign: "sbc-search", keyword: "apartamento sbc", device: "mobile",
+      origin: "google_ads", referrer_host: null, utm_source: "google", utm_campaign: "sbc-search", keyword: "apartamento sbc", device: "mobile",
       lead_id: "11111111-1111-1111-1111-111111111111", current_section: "faq",
     },
     {
       id: "s-direct", started_at: ago(30 * 1000), last_event_at: ago(10 * 1000),
-      landing_url: "https://lancamento.espontone.com.br/", utm_source: null, utm_campaign: null, keyword: null,
+      landing_url: "https://lancamento.espontone.com.br/", origin: "organic_search", referrer_host: "www.google.com.br", utm_source: null, utm_campaign: null, keyword: null,
       device: "desktop", lead_id: null, current_section: "galeria3d",
     },
   ];
@@ -102,7 +102,8 @@ test("query: panel_sessions_live by env, newest activity first, no raw props or 
   expect(has(q, "eq", "env", "production")).toBe(true);
   expect(has(q, "order", "last_event_at", { ascending: false })).toBe(true);
   expect(q.calls[0][0]).toBe("select");
-  expect(q.calls[0][1]).not.toMatch(/\*|ip_hash|props/);
+  expect(q.calls[0][1]).not.toMatch(/\*|ip_hash|props|landing_url/);
+  expect(q.calls[0][1].split(",")).toEqual(expect.arrayContaining(["origin", "referrer_host", "lead_id", "current_section"]));
 });
 
 test("staging environment is used", async () => {
@@ -133,7 +134,9 @@ test("cards: origin, campaign and keyword, device, section, times; never the cli
   expect(ads.textContent).toContain("há 12 min");
   expect(ads.textContent).toContain("há 2 min");
   const direct = cards[1];
-  expect(direct.textContent).toContain("Orgânico ou direto");
+  expect(direct.textContent).toContain("Busca orgânica");
+  expect(direct.textContent).toContain("www.google.com.br");
+  expect(direct.textContent).not.toContain("Orgânico ou direto");
   expect(direct.textContent).toContain("Computador");
   expect(direct.textContent).toContain("Galeria");
   expect(direct.textContent).toContain("agora");

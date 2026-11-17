@@ -7,7 +7,7 @@ import { useEnv, ENV_OPTIONS } from "../EnvContext";
 import { useOverlay } from "../useOverlay";
 import { PERIODS, periodRange, todaySP } from "../lib/period";
 import { ORIGINS } from "../lib/origin";
-import { sumFunnel, leadsPerDay, sortCampaigns } from "../lib/funnel";
+import { sumFunnel, leadsPerDay, aggregateCampaigns } from "../lib/funnel";
 import OriginBadge from "../OriginBadge";
 import { Segmented, periodText } from "./LeadsPage";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const CHUNK = 1000;
 const CAMPAIGN_LIMIT = 200;
 const FUNNEL_COLUMNS = "day,origin,visits,watched_video,reached_form,started_form,submitted,thank_you,whatsapp";
-const CAMPAIGN_COLUMNS = "origin,utm_campaign,keyword,visits,leads,conversion_pct";
+const CAMPAIGN_COLUMNS = "day,origin,utm_campaign,keyword,visits,leads";
 const INITIAL = { period: "7d", from: "", to: "", origin: "" };
 const LOSS = "#E8877E";
 
@@ -27,16 +27,16 @@ const numberFmt = new Intl.NumberFormat("pt-BR");
 const pctFmt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 const pct = (v) => `${pctFmt.format(v)}%`;
 
-// Every funnel row of the filter (days x origins), 1000 at a time: a long custom period can pass
-// the PostgREST row cap.
-async function fetchFunnel({ env, origin, range }) {
+// All rows of a per-day view for the filter (env + day range + origin), 1000 at a time: a long
+// custom period can pass the PostgREST row cap. `order` keeps the pages stable.
+async function fetchDaily(view, columns, order, { env, origin, range }) {
   const all = [];
   for (let from = 0; ; from += CHUNK) {
-    let q = supabase.from("panel_funnel_daily").select(FUNNEL_COLUMNS)
-      .eq("env", env).gte("day", range.fromDay).lte("day", range.toDay);
+    let q = supabase.from(view).select(columns).eq("env", env).gte("day", range.fromDay).lte("day", range.toDay);
     if (origin) q = q.eq("origin", origin);
+    order.forEach((col) => { q = q.order(col, { ascending: true }); });
     // eslint-disable-next-line no-await-in-loop
-    const { data, error } = await q.order("day", { ascending: true }).order("origin", { ascending: true }).range(from, from + CHUNK - 1);
+    const { data, error } = await q.range(from, from + CHUNK - 1);
     if (error) throw error;
     all.push(...(data || []));
     if (!data || data.length < CHUNK) break;
@@ -44,14 +44,10 @@ async function fetchFunnel({ env, origin, range }) {
   return all;
 }
 
-// panel_campaigns has no day column: it is always the whole history of the environment.
-async function fetchCampaigns({ env, origin }) {
-  let q = supabase.from("panel_campaigns").select(CAMPAIGN_COLUMNS).eq("env", env);
-  if (origin) q = q.eq("origin", origin);
-  const { data, error } = await q.order("leads", { ascending: false }).order("visits", { ascending: false }).limit(CAMPAIGN_LIMIT);
-  if (error) throw error;
-  return sortCampaigns(data);
-}
+const fetchFunnel = (args) => fetchDaily("panel_funnel_daily", FUNNEL_COLUMNS, ["day", "origin"], args);
+const fetchCampaigns = async (args) => aggregateCampaigns(
+  await fetchDaily("panel_campaigns_daily", CAMPAIGN_COLUMNS, ["day", "origin", "utm_campaign", "keyword"], args),
+);
 
 /* ---------- pieces ---------- */
 
@@ -288,8 +284,8 @@ export default function FunilPage() {
     placeholderData: keepPreviousData,
   });
   const campaignsQ = useQuery({
-    queryKey: ["panel_campaigns", env, f.origin],
-    queryFn: () => fetchCampaigns({ env, origin: f.origin }),
+    queryKey: ["panel_campaigns_daily", env, f.origin, range.fromDay, range.toDay],
+    queryFn: () => fetchCampaigns({ env, origin: f.origin, range }),
     placeholderData: keepPreviousData,
   });
 
@@ -297,7 +293,8 @@ export default function FunilPage() {
   const funnel = sumFunnel(rows);
   const days = leadsPerDay(rows, range.fromDay, range.toDay);
   const leads = funnel.steps.find((s) => s.key === "submitted").count;
-  const campaigns = campaignsQ.data || [];
+  const allCampaigns = campaignsQ.data || [];
+  const campaigns = allCampaigns.slice(0, CAMPAIGN_LIMIT);
   const envLabel = (ENV_OPTIONS.find((o) => o.value === env) || ENV_OPTIONS[0]).label.toLowerCase();
   const originText = f.origin ? `, ${(ORIGINS.find((o) => o.value === f.origin) || {}).label}` : "";
   const stale = (q) => (q.isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity");
@@ -446,11 +443,7 @@ export default function FunilPage() {
         label="Campanhas"
         title="Campanhas"
         className="mt-4 lg:mt-5"
-        aside={(
-          <p className="text-[13px] text-[#D9BB78]">
-            Desde o início, não segue o período escolhido
-          </p>
-        )}
+        aside={allCampaigns.length > 0 && <p className="text-[13px] text-[#8E8E8E]">No mesmo período e origem do funil</p>}
       >
         {campaignsQ.isError && !campaignsQ.data ? (
           <LoadError what="as campanhas" onRetry={() => campaignsQ.refetch()} />
@@ -460,16 +453,16 @@ export default function FunilPage() {
             {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-5 bg-white/[0.05]" />)}
           </div>
         ) : campaigns.length === 0 ? (
-          <Empty title="Nenhuma campanha ainda.">
-            {f.origin ? "Nenhuma visita desta origem até agora." : "As campanhas aparecem quando chegarem as primeiras visitas."}
+          <Empty title="Nenhuma campanha neste período.">
+            {f.origin ? "Escolha outra origem ou um período maior." : "Escolha um período maior para ver as campanhas."}
           </Empty>
         ) : (
           <div className={`mt-2 ${stale(campaignsQ)}`}>
             <div className="hidden md:block"><CampaignsTable rows={campaigns} /></div>
             <div className="md:hidden"><CampaignCards rows={campaigns} /></div>
-            {campaigns.length >= CAMPAIGN_LIMIT && (
+            {allCampaigns.length > CAMPAIGN_LIMIT && (
               <p className="border-t border-white/[0.06] px-4 py-3 text-[13px] text-[#8E8E8E] lg:px-5">
-                {`Mostrando as ${CAMPAIGN_LIMIT} com mais leads.`}
+                {`Mostrando as ${CAMPAIGN_LIMIT} com mais leads de ${numberFmt.format(allCampaigns.length)}.`}
               </p>
             )}
           </div>
