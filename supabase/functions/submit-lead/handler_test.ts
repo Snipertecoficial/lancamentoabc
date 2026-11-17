@@ -88,15 +88,16 @@ Deno.test("valido: grava visitor, sessao, evento sem PII, depois recordLead; 200
   assertEquals(b.session_id, SID);
   assertEquals(evs.length, 1);
   assertEquals(evs[0].type, "lead_submitted");
-  assertEquals(evs[0].props, { form_id: "hero", intent: "morar", lead_token: out.lead_token });
+  const expectedHash = await sha256Hex("5.6.7.8" + "salt" + new Date().toISOString().slice(0, 10));
+  assertEquals(evs[0].props, { form_id: "hero", intent: "morar", lead_token: out.lead_token, ip_hash: expectedHash });
   assertEquals(JSON.stringify(evs[0]).includes("Maria"), false);
   assertEquals(JSON.stringify(evs[0]).includes("9000"), false);
 });
 
-Deno.test("ipHash: sha256 de ip + salt + data UTC; user-agent repassado", async () => {
+Deno.test("ipHash: sha256 do IP do cliente (último x-forwarded-for) + salt + data UTC; user-agent repassado", async () => {
   const { deps, calls } = fakeDeps();
   await handleSubmitLead(post(body()), deps);
-  const expected = await sha256Hex("1.2.3.4" + "salt" + new Date().toISOString().slice(0, 10));
+  const expected = await sha256Hex("5.6.7.8" + "salt" + new Date().toISOString().slice(0, 10));
   assertEquals(calls.count[0], expected);
   assertEquals(calls.session[0][1], expected);
   assertEquals(calls.session[0][3], "Mozilla/5.0 (iPhone)");
@@ -216,4 +217,51 @@ Deno.test("OPTIONS -> 204 com CORS; GET -> 405; origem nao permitida sem header 
   assertEquals(g.status, 405);
   const bad = await handleSubmitLead(post(body(), { origin: "https://evil.com" }), deps);
   assertEquals(bad.headers.get("access-control-allow-origin"), null);
+});
+
+Deno.test("rate limit usa o hash do REQUEST (evento carrega ip_hash), não o da sessão reutilizada", async () => {
+  // sessão antiga com ip_hash diferente: o fake de sessão ignora o hash; o handler deve contar/gravar o do request
+  const { deps, calls } = fakeDeps();
+  await handleSubmitLead(post(body()), deps);
+  const expected = await sha256Hex("5.6.7.8" + "salt" + new Date().toISOString().slice(0, 10));
+  const evs = (calls.events[0] as [unknown, { props: Record<string, unknown> }[]])[1];
+  assertEquals(evs[0].props.ip_hash, expected);
+  assertEquals(calls.count[0], expected);
+});
+
+Deno.test("forjar o primeiro x-forwarded-for não muda o ip_hash; cf-connecting-ip tem precedência", async () => {
+  const a = fakeDeps();
+  const b = fakeDeps();
+  const c = fakeDeps();
+  await handleSubmitLead(post(body(), { "x-forwarded-for": "9.9.9.9, 5.6.7.8" }), a.deps);
+  await handleSubmitLead(post(body(), { "x-forwarded-for": "5.6.7.8" }), b.deps);
+  await handleSubmitLead(post(body(), { "x-forwarded-for": "5.6.7.8", "cf-connecting-ip": "4.4.4.4" }), c.deps);
+  assertEquals(a.calls.count[0], b.calls.count[0]);
+  assertNotEquals(c.calls.count[0], b.calls.count[0]);
+});
+
+Deno.test("corpo > 16KB -> 400 invalid_request", async () => {
+  const { deps, calls } = fakeDeps();
+  const res = await handleSubmitLead(post(body({ pad: "x".repeat(17000) })), deps);
+  assertEquals(res.status, 400);
+  assertEquals(await json(res), { ok: false, error: "invalid_request" });
+  assertEquals(calls.order, []);
+});
+
+Deno.test("form_id > 64 ou com caracteres inválidos -> invalid_request; válido passa", async () => {
+  for (const form_id of ["x".repeat(65), "a b", "a<b>", "é"]) {
+    const { deps } = fakeDeps();
+    const res = await handleSubmitLead(post(body({ form_id })), deps);
+    assertEquals(res.status, 400);
+    assertEquals(await json(res), { ok: false, error: "invalid_request" });
+  }
+  const { deps } = fakeDeps();
+  assertEquals((await handleSubmitLead(post(body({ form_id: "hero_1-A".padEnd(64, "z") })), deps)).status, 200);
+});
+
+Deno.test("phone > 40 caracteres -> invalid_phone", async () => {
+  const { deps } = fakeDeps();
+  const res = await handleSubmitLead(post(body({ phone: "(11) 90000-0301" + " ".repeat(30) })), deps);
+  assertEquals(res.status, 400);
+  assertEquals(await json(res), { ok: false, error: "invalid_phone" });
 });

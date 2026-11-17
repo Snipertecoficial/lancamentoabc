@@ -26,6 +26,9 @@ export type SubmitLeadDeps = {
 
 const MAX_PER_HOUR = 5;
 const MIN_ELAPSED_MS = 2000;
+const MAX_BODY_BYTES = 16 * 1024;
+const MAX_PHONE_CHARS = 40;
+const FORM_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function handleSubmitLead(req: Request, deps: SubmitLeadDeps): Promise<Response> {
@@ -42,7 +45,9 @@ export async function handleSubmitLead(req: Request, deps: SubmitLeadDeps): Prom
 
   let p: Record<string, unknown>;
   try {
-    const parsed = JSON.parse(await req.text());
+    const raw = await req.text();
+    if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) return fail(400, "invalid_request");
+    const parsed = JSON.parse(raw);
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return fail(400, "invalid_request");
     p = parsed as Record<string, unknown>;
   } catch {
@@ -57,7 +62,7 @@ export async function handleSubmitLead(req: Request, deps: SubmitLeadDeps): Prom
   if (visitorId !== null && (typeof visitorId !== "string" || !UUID_RE.test(visitorId))) {
     return fail(400, "invalid_request");
   }
-  if (typeof p.form_id !== "string" || p.form_id === "") return fail(400, "invalid_request");
+  if (typeof p.form_id !== "string" || !FORM_ID_RE.test(p.form_id)) return fail(400, "invalid_request");
 
   // Bot: resposta idêntica à de sucesso, sem gravar nada e sem revelar o filtro.
   const hp = p.hp;
@@ -70,7 +75,7 @@ export async function handleSubmitLead(req: Request, deps: SubmitLeadDeps): Prom
   const name = typeof p.name === "string" ? p.name.trim() : "";
   if (name.length < 2 || name.length > 80) return fail(400, "invalid_name");
   const phoneRaw = typeof p.phone === "string" ? p.phone : null;
-  const phoneE164 = normalizePhoneBR(phoneRaw);
+  const phoneE164 = phoneRaw !== null && phoneRaw.length <= MAX_PHONE_CHARS ? normalizePhoneBR(phoneRaw) : null;
   if (!phoneE164) return fail(400, "invalid_phone");
   let email: string | null = null;
   if (p.email !== undefined && p.email !== null && p.email !== "") {
@@ -92,7 +97,7 @@ export async function handleSubmitLead(req: Request, deps: SubmitLeadDeps): Prom
       id: crypto.randomUUID(),
       type: "lead_submitted",
       ts: now.toISOString(),
-      props: { form_id: p.form_id, ...(intent ? { intent } : {}), lead_token: leadToken },
+      props: { form_id: p.form_id, ...(intent ? { intent } : {}), lead_token: leadToken, ip_hash: ipHash },
     };
     const batch: Batch = { v: 1, env, session_id: sessionId, visitor_id: visitorId, session: {}, events: [event] };
 

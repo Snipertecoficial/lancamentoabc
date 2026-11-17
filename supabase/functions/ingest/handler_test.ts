@@ -14,7 +14,6 @@ function fakeDeps() {
     upsertSession: [] as unknown[][],
     upsertVisitor: [] as Batch[],
     insertEvents: [] as RadarEvent[][],
-    recordLead: [] as Parameters<IngestDeps["recordLead"]>[0][],
     markWhatsapp: [] as string[],
     order: [] as string[],
   };
@@ -33,11 +32,6 @@ function fakeDeps() {
       calls.order.push("events");
       calls.insertEvents.push(events);
       return Promise.resolve();
-    },
-    recordLead: (args) => {
-      calls.order.push("lead");
-      calls.recordLead.push(args);
-      return Promise.resolve("lead-id");
     },
     markWhatsapp: (t) => {
       calls.order.push("whatsapp");
@@ -71,21 +65,7 @@ const leadEvent = {
   },
 };
 
-Deno.test("lead_submitted: recordLead com telefone normalizado e evento sem PII", async () => {
-  const { deps, calls } = fakeDeps();
-  const res = await handleIngest(post(batch([leadEvent]), { "x-forwarded-for": "1.2.3.4, 5.6.7.8" }), deps);
-  assertEquals(res.status, 204);
-  assertEquals(calls.recordLead[0].phone_e164, "+5511940383680");
-  assertEquals(calls.recordLead[0].phone_raw, "(11) 94038-3680");
-  assertEquals(calls.recordLead[0].name, "Maria");
-  assertEquals(calls.recordLead[0].email, "m@x.com");
-  assertEquals(calls.recordLead[0].lead_token, TOKEN);
-  assertEquals(calls.recordLead[0].session_id, SID);
-  assertEquals(Object.keys(calls.insertEvents[0][0].props!).sort(), ["form_id", "lead_token"]);
-  assertEquals(calls.order, ["visitor", "session", "events", "lead"]);
-});
-
-Deno.test("ipHash: sha256 de ip + salt + data UTC; bot detectado", async () => {
+Deno.test("ipHash: sha256 de ip (último x-forwarded-for) + salt + data UTC; bot detectado", async () => {
   const { deps, calls } = fakeDeps();
   await handleIngest(
     post(batch([{ id: evId(1), type: "page_view", ts: nowIso() }]), {
@@ -95,7 +75,7 @@ Deno.test("ipHash: sha256 de ip + salt + data UTC; bot detectado", async () => {
   );
   const { sha256Hex } = await import("../_shared/hash.ts");
   const day = new Date().toISOString().slice(0, 10);
-  assertEquals(calls.upsertSession[0][1], await sha256Hex("1.2.3.4" + "salt" + day));
+  assertEquals(calls.upsertSession[0][1], await sha256Hex("5.6.7.8" + "salt" + day));
   assertEquals(calls.upsertSession[0][2], true);
 });
 
@@ -133,7 +113,7 @@ Deno.test("deps lançando erro: 204, não 500", async () => {
   const orig = console.error;
   console.error = () => {};
   try {
-    const res = await handleIngest(post(batch([leadEvent])), throwing);
+    const res = await handleIngest(post(batch([{ id: evId(1), type: "page_view", ts: nowIso() }])), throwing);
     assertEquals(res.status, 204);
   } finally {
     console.error = orig;
@@ -163,17 +143,6 @@ Deno.test("user-agent do request chega em upsertSession", async () => {
   assertEquals(calls.upsertSession[0][3], "Mozilla/5.0 (iPhone) Teste");
 });
 
-Deno.test("lead_submitted sem lead_token: token gerado vai para recordLead e para props do evento", async () => {
-  const { deps, calls } = fakeDeps();
-  const { lead_token: _t, ...noToken } = leadEvent.props;
-  await handleIngest(post(batch([{ ...leadEvent, props: noToken }])), deps);
-  const token = calls.recordLead[0].lead_token;
-  assertEquals(typeof token, "string");
-  assertEquals(token.length > 0, true);
-  assertEquals(calls.insertEvents[0][0].props!.lead_token, token);
-  assertEquals(Object.keys(calls.insertEvents[0][0].props!).sort(), ["form_id", "lead_token"]);
-});
-
 async function quiet<T>(f: () => Promise<T>): Promise<T> {
   const orig = console.error;
   console.error = () => {};
@@ -184,15 +153,7 @@ async function quiet<T>(f: () => Promise<T>): Promise<T> {
   }
 }
 
-Deno.test("insertEvents lança: recordLead ainda é chamado", async () => {
-  const { deps, calls } = fakeDeps();
-  const d: IngestDeps = { ...deps, insertEvents: () => Promise.reject(new Error("boom")) };
-  const res = await quiet(() => handleIngest(post(batch([leadEvent])), d));
-  assertEquals(res.status, 204);
-  assertEquals(calls.recordLead.length, 1);
-});
-
-Deno.test("upsertSession e upsertVisitor lançam: eventos, leads e whatsapp ainda rodam", async () => {
+Deno.test("upsertSession e upsertVisitor lançam: eventos e whatsapp ainda rodam", async () => {
   const { deps, calls } = fakeDeps();
   const d: IngestDeps = {
     ...deps,
@@ -203,26 +164,6 @@ Deno.test("upsertSession e upsertVisitor lançam: eventos, leads e whatsapp aind
   const res = await quiet(() => handleIngest(post(batch([leadEvent, wa])), d));
   assertEquals(res.status, 204);
   assertEquals(calls.insertEvents.length, 1);
-  assertEquals(calls.recordLead.length, 1);
-  assertEquals(calls.markWhatsapp, [TOKEN]);
-});
-
-Deno.test("primeiro recordLead lança: segundo lead e markWhatsapp continuam", async () => {
-  const { deps, calls } = fakeDeps();
-  const T2 = "44444444-4444-4444-8444-444444444444";
-  let n = 0;
-  const d: IngestDeps = {
-    ...deps,
-    recordLead: (a) => {
-      if (n++ === 0) return Promise.reject(new Error("boom"));
-      return deps.recordLead(a);
-    },
-  };
-  const lead2 = { ...leadEvent, id: evId(2), props: { ...leadEvent.props, lead_token: T2 } };
-  const wa = { id: evId(3), type: "whatsapp_click", ts: nowIso(), props: { lead_token: TOKEN } };
-  const res = await quiet(() => handleIngest(post(batch([leadEvent, lead2, wa])), d));
-  assertEquals(res.status, 204);
-  assertEquals(calls.recordLead.map((l) => l.lead_token), [T2]);
   assertEquals(calls.markWhatsapp, [TOKEN]);
 });
 
@@ -236,12 +177,19 @@ Deno.test("PII é removida de props de qualquer evento", async () => {
   assertEquals(calls.insertEvents[0][0].props, { field: "email" });
 });
 
-Deno.test("lead_token inválido do cliente é tratado como ausente", async () => {
+
+Deno.test("lead_submitted vindo do ingest é descartado: sem evento, sem lead; outros eventos seguem", async () => {
   const { deps, calls } = fakeDeps();
-  const ev = { ...leadEvent, props: { ...leadEvent.props, lead_token: "not-a-uuid" } };
-  await handleIngest(post(batch([ev])), deps);
-  const token = calls.recordLead[0].lead_token;
-  assertEquals(token === "not-a-uuid", false);
-  assertEquals(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token), true);
-  assertEquals(calls.insertEvents[0][0].props!.lead_token, token);
+  const pv = { id: evId(2), type: "page_view", ts: nowIso() };
+  const res = await handleIngest(post(batch([leadEvent, pv])), deps);
+  assertEquals(res.status, 204);
+  assertEquals(calls.insertEvents.length, 1);
+  assertEquals(calls.insertEvents[0].map((e) => e.type), ["page_view"]);
+  assertEquals("recordLead" in deps, false);
+});
+
+Deno.test("só lead_submitted: nenhum insertEvents", async () => {
+  const { deps, calls } = fakeDeps();
+  await handleIngest(post(batch([leadEvent])), deps);
+  assertEquals(calls.insertEvents.length, 0);
 });

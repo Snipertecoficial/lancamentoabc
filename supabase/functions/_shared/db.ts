@@ -122,14 +122,15 @@ export function createDb(url: string, serviceRoleKey: string) {
       return data as string;
     },
 
-    /** Envios `lead_submitted` na última hora de sessões com o mesmo ip_hash (rate limit). */
+    /** Envios `lead_submitted` na última hora com o mesmo ip_hash (rate limit). */
     async countRecentLeadSubmissions(ipHash: string): Promise<number> {
       const since = new Date(Date.now() - 3600_000).toISOString();
+      // ip_hash vem do evento (hash do request), não da sessão: reutilizar session_id não burla o limite.
       const { count, error } = await sb.from("events")
-        .select("id, sessions!inner(ip_hash)", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .eq("type", "lead_submitted")
-        .gte("occurred_at", since)
-        .eq("sessions.ip_hash", ipHash);
+        .eq("props->>ip_hash", ipHash)
+        .gt("received_at", since);
       check(error);
       return count ?? 0;
     },
