@@ -29,6 +29,16 @@ export function getSessionId(now = Date.now()) {
   }
 }
 
+// Force a brand-new session (new id, fresh 30-min clock), e.g. when a new ad landing arrives.
+export function startNewSession(now = Date.now()) {
+  const sid = uuid();
+  try {
+    sessionStorage.setItem("rdr_sid", sid);
+    sessionStorage.setItem("rdr_slast", String(now));
+  } catch (e) { /* ignore */ }
+  return sid;
+}
+
 function readCookie() {
   const m = document.cookie.match(/(?:^|;\s*)rdr_vid=([^;]+)/);
   return m ? m[1] : null;

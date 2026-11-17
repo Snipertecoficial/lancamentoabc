@@ -1,7 +1,7 @@
 import { RADAR_URL, RADAR_ENV } from "./config";
-import { uuid, getSessionId, getVisitorId, clearVisitorId } from "./ids";
+import { uuid, getSessionId, getVisitorId, clearVisitorId, startNewSession } from "./ids";
 import { hasConsent, onConsentChange } from "./consent";
-import { readAttribution } from "./attribution";
+import { readAttribution, campaignOf, hasCampaignParams } from "./attribution";
 import { createQueue } from "./queue";
 import { sendBatch } from "./transport";
 import * as page from "./collectors/page";
@@ -15,14 +15,45 @@ const LEAD_KEY = "radar_lead_token";
 let inited = false;
 let consentOverride = null; // set by the radar:consent event so the decision applies to the very next batch
 
-function sessionMeta() {
+function readCached() {
   try {
     const c = sessionStorage.getItem(ATTR_KEY);
     if (c) return JSON.parse(c);
   } catch (e) { /* ignore */ }
-  const a = readAttribution(location.href, document.referrer, navigator.userAgent, window.innerWidth);
+  return null;
+}
+
+function writeAttr(a) {
   try { sessionStorage.setItem(ATTR_KEY, JSON.stringify(a)); } catch (e) { /* ignore */ }
+}
+
+function freshAttribution() {
+  return readAttribution(location.href, document.referrer, navigator.userAgent, window.innerWidth);
+}
+
+function sessionMeta() {
+  const c = readCached();
+  if (c) return c;
+  const a = freshAttribution();
+  writeAttr(a);
   return a;
+}
+
+// Called at init and on every page_view (pushState/popstate). A URL carrying campaign params
+// overrides the cached attribution; if that changes the campaign, the ad visit becomes its own
+// session (the server only stores session meta on first insert). URLs without params keep the cache.
+function syncAttribution() {
+  try {
+    if (!hasCampaignParams(location.href)) return;
+    const next = freshAttribution();
+    const cached = readCached();
+    if (cached && JSON.stringify(campaignOf(cached)) === JSON.stringify(campaignOf(next))) return;
+    if (cached) {
+      queue.flush(true); // pending events still belong to the old session/attribution
+      startNewSession();
+    }
+    writeAttr(next);
+  } catch (e) { /* never throw */ }
 }
 
 const queue = createQueue({
@@ -45,6 +76,8 @@ let stops = [];
 export function initRadar() {
   if (inited || !RADAR_URL) return;
   inited = true;
+  sessionMeta(); // pin the baseline attribution at init so later ad landings are detected as a change
+  syncAttribution();
   // Collectors start BEFORE the flush listeners below: listeners run in registration order, so a
   // collector's pagehide/visibilitychange handler (e.g. sections' section_view) enqueues first
   // and the flush then includes it.
@@ -76,6 +109,7 @@ export function __stopRadar() {
 export function track(type, props, opts) {
   if (!RADAR_URL) return;
   try {
+    if (type === "page_view") syncAttribution();
     const e = { id: uuid(), type, ts: new Date().toISOString() };
     if (opts && opts.name) e.name = opts.name;
     if (opts && opts.section) e.section = opts.section;

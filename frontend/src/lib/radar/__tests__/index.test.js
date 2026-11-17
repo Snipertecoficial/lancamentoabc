@@ -187,3 +187,65 @@ describe("revoking consent removes the persistent visitor id", () => {
     expect(document.cookie).not.toContain("rdr_vid");
   });
 });
+
+describe("campaign attribution refresh", () => {
+  const AD = "/?utm_source=google&utm_medium=cpc&utm_campaign=lp&gclid=G1&keyword=casa";
+  const batch = async (n) => JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[n][1]));
+  const hide = () => window.dispatchEvent(new Event("pagehide"));
+  afterEach(() => { window.history.replaceState({}, "", "/"); });
+
+  test("reload with ad params after a no-param visit starts a NEW session with attribution", async () => {
+    window.history.replaceState({}, "", "/");
+    let r = load("https://r.test/fn"); r.initRadar(); hide();
+    const first = await batch(0);
+    expect(first.session.gclid).toBeUndefined();
+    r.__stopRadar();
+    window.history.replaceState({}, "", AD);
+    r = load("https://r.test/fn"); r.initRadar(); hide();
+    const second = await batch(1);
+    expect(second.session_id).not.toBe(first.session_id);
+    expect(second.session).toMatchObject({ gclid: "G1", utm_source: "google", utm_medium: "cpc", utm_campaign: "lp", keyword: "casa" });
+  });
+
+  test("SPA navigation to an ad URL starts a NEW session; earlier events keep the old one", async () => {
+    window.history.replaceState({}, "", "/");
+    const r = load("https://r.test/fn"); r.initRadar();
+    window.history.pushState({}, "", AD);
+    hide();
+    const first = await batch(0);
+    const second = await batch(1);
+    expect(first.session.gclid).toBeUndefined();
+    expect(second.session_id).not.toBe(first.session_id);
+    expect(second.session.gclid).toBe("G1");
+  });
+
+  test("reload of /obrigado without params keeps cached ad attribution and session_id", async () => {
+    window.history.replaceState({}, "", AD);
+    let r = load("https://r.test/fn"); r.initRadar(); hide();
+    const first = await batch(0);
+    r.__stopRadar();
+    window.history.replaceState({}, "", "/obrigado");
+    r = load("https://r.test/fn"); r.initRadar(); hide();
+    const second = await batch(1);
+    expect(second.session_id).toBe(first.session_id);
+    expect(second.session.gclid).toBe("G1");
+    expect(second.session.utm_source).toBe("google");
+  });
+
+  test("reload of the same ad URL does not rotate the session", async () => {
+    window.history.replaceState({}, "", AD);
+    let r = load("https://r.test/fn"); r.initRadar(); hide();
+    const first = await batch(0);
+    r.__stopRadar();
+    r = load("https://r.test/fn"); r.initRadar(); hide();
+    expect((await batch(1)).session_id).toBe(first.session_id);
+  });
+
+  test("fresh session with params works as before", async () => {
+    window.history.replaceState({}, "", AD);
+    const r = load("https://r.test/fn"); r.initRadar(); hide();
+    const b = await batch(0);
+    expect(b.session_id).toMatch(UUID);
+    expect(b.session).toMatchObject({ gclid: "G1", utm_campaign: "lp" });
+  });
+});

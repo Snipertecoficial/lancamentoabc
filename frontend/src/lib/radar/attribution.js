@@ -1,5 +1,19 @@
 const KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "gbraid", "wbraid", "fbclid", "keyword", "matchtype", "campaign_id", "adgroup_id"];
 
+// Campaign/ad fields of an attribution object (ignores referrer/device/landing_url).
+export function campaignOf(a) {
+  const o = {};
+  for (const k of KEYS) if (a && a[k]) o[k] = a[k];
+  return o;
+}
+
+export function hasCampaignParams(href) {
+  try {
+    const u = new URL(href);
+    return KEYS.some((k) => u.searchParams.get(k));
+  } catch (e) { return false; }
+}
+
 export function readAttribution(href, referrer, userAgent, width) {
   const out = { referrer: referrer || "", lang: "" };
   try {
