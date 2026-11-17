@@ -2,6 +2,9 @@ import { sha256Hex } from "./hash.ts";
 
 export const DEFAULT_ALLOWED_ORIGINS = [
   "https://lancamento.espontone.com.br",
+  "http://lancamento.espontone.com.br",
+  "https://www.lancamento.espontone.com.br",
+  "http://www.lancamento.espontone.com.br",
   "http://localhost:3000",
 ];
 

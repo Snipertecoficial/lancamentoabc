@@ -25,7 +25,7 @@ export type SubmitLeadDeps = {
   ipSalt: string;
 };
 
-const MAX_PER_HOUR = 5;
+const MAX_PER_HOUR = 10;
 const MIN_ELAPSED_MS = 2000;
 const MAX_BODY_BYTES = 16 * 1024;
 const MAX_PHONE_CHARS = 40;

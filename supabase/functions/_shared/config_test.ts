@@ -1,7 +1,13 @@
 import { assertEquals, assertNotEquals, assertMatch } from "jsr:@std/assert@1";
 import { allowedOrigins, DEFAULT_ALLOWED_ORIGINS, ipSalt } from "./config.ts";
 
-const DEFAULTS = ["https://lancamento.espontone.com.br", "http://localhost:3000"];
+const DEFAULTS = [
+  "https://lancamento.espontone.com.br",
+  "http://lancamento.espontone.com.br",
+  "https://www.lancamento.espontone.com.br",
+  "http://www.lancamento.espontone.com.br",
+  "http://localhost:3000",
+];
 const env = (o: Record<string, string>) => (k: string) => o[k];
 
 Deno.test("allowedOrigins: default when unset or empty", () => {

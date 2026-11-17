@@ -197,14 +197,14 @@ Deno.test("bot: elapsed_ms < 2000 (ou ausente) -> 200 sem gravar, tokens distint
   assertEquals(calls.order, []);
 });
 
-Deno.test("rate limit: >= 5 na ultima hora -> 429 sem gravar", async () => {
-  const { deps, calls } = fakeDeps({ countRecentLeadSubmissions: () => Promise.resolve(5) });
+Deno.test("rate limit: >= 10 na ultima hora -> 429 sem gravar", async () => {
+  const { deps, calls } = fakeDeps({ countRecentLeadSubmissions: () => Promise.resolve(10) });
   const res = await handleSubmitLead(post(body()), deps);
   assertEquals(res.status, 429);
   assertEquals(res.headers.get("access-control-allow-origin"), ORIGIN);
   assertEquals(await json(res), { ok: false, error: "rate_limited" });
   assertEquals(calls.order, []);
-  const ok = fakeDeps({ countRecentLeadSubmissions: () => Promise.resolve(4) });
+  const ok = fakeDeps({ countRecentLeadSubmissions: () => Promise.resolve(9) });
   assertEquals((await handleSubmitLead(post(body()), ok.deps)).status, 200);
 });
 
