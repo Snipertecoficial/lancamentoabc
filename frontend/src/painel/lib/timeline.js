@@ -2,6 +2,7 @@
 import { STAGES } from "./stage";
 
 const DUP_WINDOW_MS = 2000;
+const PAIR_WINDOW_MS = 1500;
 const time = (e) => Date.parse(e.occurred_at) || 0;
 const propsOf = (e) => (e && e.props && typeof e.props === "object" ? e.props : {});
 const pctOf = (e) => {
@@ -17,16 +18,32 @@ function eventKey(e) {
   return JSON.stringify([e.type, e.name || null, e.section || null, props]);
 }
 
+// A click on these controls also emits a semantic event (faq_open, video, slider_view) that
+// says more; the click row is hidden when its partner happens within 1.5 s, before or after.
+const VIDEO_TOGGLE = (e) => e.type === "video" && ["play", "pause", "unmute"].includes(e.name);
+function clickPartner(label) {
+  const l = typeof label === "string" ? label : "";
+  if (/^faq-toggle-\d+$/.test(l)) return (e) => e.type === "faq_open";
+  if (l === "hero-video-play-toggle" || l === "hero-video-mute-toggle") return VIDEO_TOGGLE;
+  if (/^slider3d-dot-\d+$/.test(l)) return (e) => e.type === "slider_view";
+  return null;
+}
+function hasPartner(click, events) {
+  const isPartner = clickPartner(propsOf(click).label);
+  return Boolean(isPartner) && events.some((e) => isPartner(e) && Math.abs(time(e) - time(click)) <= PAIR_WINDOW_MS);
+}
+
 const byTime = (events) => (events || []).map((e, i) => [e, i])
   .sort((a, b) => time(a[0]) - time(b[0]) || a[1] - b[1])
   .map(([e]) => e);
 
 // One visit's events -> what the timeline shows:
+// 0) a CTA click whose semantic event is within 1.5 s (FAQ, video toggles, gallery dots);
 // 1) video progress: only the highest % of the visit (at the moment it was reached);
 // 2) consecutive repeats of the same event within 2 s: shown once;
 // 3) consecutive scroll_depth: one line with the deepest %.
 export function collapseEvents(events) {
-  const sorted = byTime(events);
+  const sorted = byTime(events).filter((e, _, all) => e.type !== "cta_click" || !hasPartner(e, all));
   let best = null;
   sorted.forEach((e) => {
     if (isProgress(e) && pctOf(e) !== null && (!best || pctOf(e) > pctOf(best))) best = e;

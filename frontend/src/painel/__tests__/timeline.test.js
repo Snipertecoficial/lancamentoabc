@@ -83,6 +83,44 @@ describe("collapseEvents", () => {
     expect(input).toEqual(copy);
   });
 
+  test("a CTA click with a semantic partner within 1.5 s is hidden; the semantic row stays", () => {
+    const out = collapseEvents([
+      ev(0, "cta_click", { label: "faq-toggle-0", x: 1, y: 1 }),
+      ev(0.2, "faq_open", { question: "Qual o valor?" }, { section: "faq" }),
+      ev(10, "video", { video: "hero" }, { name: "play" }),
+      ev(11, "cta_click", { label: "hero-video-play-toggle" }), // partner before the click
+      ev(20, "cta_click", { label: "hero-video-mute-toggle" }),
+      ev(20.5, "video", { video: "hero" }, { name: "unmute" }),
+      ev(30, "cta_click", { label: "slider3d-dot-2" }),
+      ev(30.3, "slider_view", { index: 2, title: "Piscina" }),
+    ]);
+    expect(labels(out)).toEqual([
+      "Abriu a dúvida: Qual o valor?",
+      "Deu play no vídeo",
+      "Ativou o som do vídeo",
+      "Viu a foto: Piscina",
+    ]);
+  });
+
+  test("CTA clicks without a semantic partner stay", () => {
+    const out = collapseEvents([
+      ev(0, "cta_click", { label: "faq-toggle-1" }), // closing a question: no faq_open
+      ev(5, "faq_open", { question: "Tem lazer?" }), // too far from the click above
+      ev(10, "cta_click", { label: "hero-cta-visit" }),
+      ev(10.5, "faq_open", { question: "Aceita FGTS?" }), // not a partner of hero-cta-visit
+      ev(20, "cta_click", { label: "slider3d-dot-0" }),
+      ev(20.5, "faq_open", { question: "Outra?" }), // wrong partner type
+    ]);
+    expect(labels(out)).toEqual([
+      "Clicou em “Dúvida 2”",
+      "Abriu a dúvida: Tem lazer?",
+      "Clicou em “Agendar visita”",
+      "Abriu a dúvida: Aceita FGTS?",
+      "Clicou em “Foto 1 da galeria”",
+      "Abriu a dúvida: Outra?",
+    ]);
+  });
+
   test("empty input", () => {
     expect(collapseEvents([])).toEqual([]);
     expect(collapseEvents(undefined)).toEqual([]);
