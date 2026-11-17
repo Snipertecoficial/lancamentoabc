@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Users, Filter, Radio, LogOut, Menu, X, ChevronLeft } from "lucide-react";
+import { Users, Filter, Megaphone, Radio, LogOut, Menu, X, ChevronLeft } from "lucide-react";
 import { signOut } from "./auth";
 import { useAdminUser } from "./RequireAdmin";
 import { useEnv, ENV_OPTIONS } from "./EnvContext";
@@ -9,6 +9,7 @@ import { useOverlay } from "./useOverlay";
 const NAV = [
   { to: "/painel", label: "Leads", icon: Users, match: (p) => p === "/painel" || p === "/painel/" || p.startsWith("/painel/leads") },
   { to: "/painel/funil", label: "Funil & Campanhas", bar: "Funil", icon: Filter, match: (p) => p.startsWith("/painel/funil") },
+  { to: "/painel/anuncios", label: "Anúncios", icon: Megaphone, match: (p) => p.startsWith("/painel/anuncios") },
   { to: "/painel/ao-vivo", label: "Ao vivo", icon: Radio, match: (p) => p.startsWith("/painel/ao-vivo") },
 ];
 

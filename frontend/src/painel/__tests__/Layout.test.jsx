@@ -38,7 +38,7 @@ const nav = () => container.querySelector('nav[aria-label="Painel"]');
 test("sidebar has the three sections and the outlet", async () => {
   await mount();
   const links = [...nav().querySelectorAll("a")].map((a) => [a.textContent, a.getAttribute("href")]);
-  expect(links).toEqual([["Leads", "/painel"], ["Funil & Campanhas", "/painel/funil"], ["Ao vivo", "/painel/ao-vivo"]]);
+  expect(links).toEqual([["Leads", "/painel"], ["Funil & Campanhas", "/painel/funil"], ["Anúncios", "/painel/anuncios"], ["Ao vivo", "/painel/ao-vivo"]]);
   expect(container.querySelector('[data-testid="outlet"]')).not.toBeNull();
 });
 

@@ -8,6 +8,7 @@ import Layout from "./Layout";
 import LeadsPage from "./pages/LeadsPage";
 import LeadPage from "./pages/LeadPage";
 import AoVivoPage from "./pages/AoVivoPage";
+import AnunciosPage from "./pages/AnunciosPage";
 
 // The funnel brings Recharts: its own chunk, loaded only when the screen opens.
 const FunilPage = lazy(() => import("./pages/FunilPage"));
@@ -24,6 +25,7 @@ export default function PainelApp() {
             <Route index element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadPage />} />
             <Route path="funil" element={<Suspense fallback={<p className="text-[14px] text-[#8E8E8E]">Carregando o funil…</p>}><FunilPage /></Suspense>} />
+            <Route path="anuncios" element={<AnunciosPage />} />
             <Route path="ao-vivo" element={<AoVivoPage />} />
             <Route path="*" element={<Navigate to="/painel" replace />} />
           </Route>
