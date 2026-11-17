@@ -10,14 +10,14 @@
  *
  * O que ele envia: custo, cliques, impressões e conversões por dia, por campanha e por
  * palavra-chave (últimos 30 dias, porque o Google ainda ajusta dias recentes) e o código de
- * cada clique (gclid) dos últimos 7 dias, para ligar cada lead à campanha exata.
+ * cada clique (gclid) dos últimos 30 dias, para ligar cada lead à campanha exata.
  * Nenhum dado pessoal sai do Google Ads.
  */
 var RADAR = {
   ENDPOINT: 'https://cnsmmwbqfbaimwexmtkx.supabase.co/functions/v1/ads-sync',
   SECRET: 'COLE_AQUI_A_CHAVE_DO_RADAR',
   COST_DAYS: 30,
-  CLICK_DAYS: 7,
+  CLICK_DAYS: 30,
   CLICK_BATCH: 2000
 };
 

@@ -1,5 +1,5 @@
 // Google Ads cost per campaign / keyword, from panel_ads_campaigns_daily and panel_ads_keywords_daily
-// (one row per Sao Paulo day). Ratios are null when the divisor is zero, so the screen shows "—".
+// (one row per Sao Paulo day). Ratios are null when they cannot be computed, so the screen shows "—".
 
 const MATCH_TYPES = { EXACT: "exata", PHRASE: "frase", BROAD: "ampla" };
 
@@ -10,7 +10,8 @@ export function matchTypeLabel(t) {
 function ratios(m) {
   return {
     ...m,
-    cpl: m.leads > 0 ? m.cost / m.leads : null,
+    // No cost in the period (e.g. a lead whose click came the day before) is not a free lead.
+    cpl: m.leads > 0 && m.cost > 0 ? m.cost / m.leads : null,
     cpc: m.clicks > 0 ? m.cost / m.clicks : null,
     ctr: m.impressions > 0 ? (m.clicks / m.impressions) * 100 : null,
   };
@@ -49,7 +50,8 @@ export function aggregateAdsCampaigns(rows) {
 export function aggregateAdsKeywords(rows) {
   const map = new Map();
   (rows || []).forEach((r) => {
-    const key = `${r.campaign_id}|${r.ad_group_id || ""}|${r.criterion_id || ""}`;
+    // Leads whose keyword has no Google stats keep the keyword they came with as part of the key.
+    const key = `${r.campaign_id}|${r.ad_group_id || ""}|${r.criterion_id || `?${r.keyword_text || ""}`}`;
     if (!map.has(key)) {
       map.set(key, {
         key, campaign_id: r.campaign_id, campaign_name: null, ad_group_name: null,

@@ -46,7 +46,7 @@ async function fetchDaily(view, columns, order, range) {
 
 async function fetchLastSync() {
   const { data, error } = await supabase.from("ads_sync_runs")
-    .select("received_at,customer_id,currency").order("id", { ascending: false }).limit(1);
+    .select("received_at,customer_id,currency,time_zone").order("id", { ascending: false }).limit(1);
   if (error) throw error;
   return (data && data[0]) || null;
 }
@@ -76,6 +76,9 @@ function SyncStatus({ q }) {
       <span aria-hidden="true" className={`mr-1.5 inline-block h-2 w-2 rounded-full align-middle ${hours > 3 ? "bg-[#E8877E]" : "bg-[#4FD883]"}`} />
       {`Google Ads atualizado ${relativeTimeBR(at)}`}
       {hours > 3 && " · o script parou de enviar? Confira em Scripts no Google Ads."}
+      {q.data.time_zone && q.data.time_zone !== "America/Sao_Paulo" && (
+        <span className="text-[#E9CF93]">{` · A conta do Google Ads usa o fuso ${q.data.time_zone}; os dias podem não bater com os dos leads.`}</span>
+      )}
     </p>
   );
 }
@@ -95,6 +98,8 @@ function NotConnected() {
 }
 
 const dash = "—";
+// Leads but no cost in the period (the click came before it, or the keyword has no Google stats).
+const cplText = (r, money) => (r.cpl !== null ? money.format(r.cpl) : r.leads > 0 ? "sem custo" : dash);
 const keywordLabel = (k) => k.keyword_text || "Palavra-chave não identificada";
 const campaignLabel = (c) => c.campaign_name || `Campanha ${c.campaign_id}`;
 
@@ -123,7 +128,7 @@ function CampaignsTable({ rows, money }) {
             <TableCell className={`${num} text-[#B8BEC5]`}>{numberFmt.format(c.clicks)}</TableCell>
             <TableCell className={`${num} text-[#B8BEC5]`}>{c.cpc === null ? dash : money.format(c.cpc)}</TableCell>
             <TableCell className={`${num} font-semibold text-white`}>{numberFmt.format(c.leads)}</TableCell>
-            <TableCell className={`${num} font-semibold text-[#9CC7EF]`}>{c.cpl === null ? dash : money.format(c.cpl)}</TableCell>
+            <TableCell className={`${num} font-semibold text-[#9CC7EF]`}>{cplText(c, money)}</TableCell>
             <TableCell className={`${num} text-[#8E8E8E]`}>{decFmt.format(c.google_conversions)}</TableCell>
           </TableRow>
         ))}
@@ -159,7 +164,7 @@ function KeywordsTable({ rows, money }) {
             <TableCell className={`${num} text-white`}>{money.format(k.cost)}</TableCell>
             <TableCell className={`${num} text-[#B8BEC5]`}>{numberFmt.format(k.clicks)}</TableCell>
             <TableCell className={`${num} font-semibold text-white`}>{numberFmt.format(k.leads)}</TableCell>
-            <TableCell className={`${num} font-semibold text-[#9CC7EF]`}>{k.cpl === null ? dash : money.format(k.cpl)}</TableCell>
+            <TableCell className={`${num} font-semibold text-[#9CC7EF]`}>{cplText(k, money)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -183,7 +188,7 @@ function Cards({ rows, money, title, subtitle }) {
           <div className="shrink-0 text-right">
             <p className="font-display text-[22px] font-semibold leading-none tabular-nums text-white lining-nums">{numberFmt.format(r.leads)}</p>
             <p className="mt-1 text-[12px] text-[#8E8E8E]">{r.leads === 1 ? "lead" : "leads"}</p>
-            <p className="mt-1 text-[12px] font-medium tabular-nums text-[#9CC7EF]">{r.cpl === null ? "sem lead" : `${money.format(r.cpl)}/lead`}</p>
+            <p className="mt-1 text-[12px] font-medium tabular-nums text-[#9CC7EF]">{r.cpl !== null ? `${money.format(r.cpl)}/lead` : r.leads > 0 ? "sem custo" : "sem lead"}</p>
           </div>
         </li>
       ))}
@@ -213,7 +218,7 @@ export default function AnunciosPage() {
     return { ...p, period, from: p.from || range.fromDay, to: p.to || range.toDay };
   });
 
-  const syncQ = useQuery({ queryKey: ["ads_sync_runs"], queryFn: fetchLastSync });
+  const syncQ = useQuery({ queryKey: ["ads_sync_runs"], queryFn: fetchLastSync, refetchInterval: 5 * 60 * 1000 });
   const campaignsQ = useQuery({
     queryKey: ["panel_ads_campaigns_daily", range.fromDay, range.toDay],
     queryFn: async () => aggregateAdsCampaigns(await fetchDaily("panel_ads_campaigns_daily", CAMPAIGN_COLUMNS, ["day", "campaign_id"], range)),
@@ -266,7 +271,7 @@ export default function AnunciosPage() {
         <>
           <section aria-label="Resumo do período" className={`mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.06] md:mt-5 md:grid-cols-3 xl:grid-cols-6 ${stale(campaignsQ)}`}>
             <Kpi loading={loadingKpis} label="Investimento" value={money.format(totals.cost)} />
-            <Kpi loading={loadingKpis} label="Leads do Radar" value={numberFmt.format(totals.leads)} hint="Nome e WhatsApp no painel" />
+            <Kpi loading={loadingKpis} label="Leads do Radar" value={numberFmt.format(totals.leads)} hint="Atribuídos a anúncios do Google" />
             <Kpi loading={loadingKpis} label="Custo por lead" value={totals.cpl === null ? dash : money.format(totals.cpl)} />
             <Kpi loading={loadingKpis} label="Cliques" value={numberFmt.format(totals.clicks)} hint={totals.ctr === null ? null : `CTR ${decFmt.format(totals.ctr)}%`} />
             <Kpi loading={loadingKpis} label="CPC médio" value={totals.cpc === null ? dash : money.format(totals.cpc)} />

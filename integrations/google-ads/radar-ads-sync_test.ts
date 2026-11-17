@@ -50,7 +50,7 @@ Deno.test("sem chave configurada o script para com mensagem clara e nao envia na
   assertEquals(posts.length, 0);
 });
 
-Deno.test("envia custos de 30 dias e cliques de 7 dias, com a chave no cabecalho", () => {
+Deno.test("envia custos de 30 dias e cliques de 30 dias, com a chave no cabecalho", () => {
   const { api, queries, posts, logs } = load(rowsFor);
   api.RADAR.SECRET = "chave-de-teste-1234567890";
   api.main();
@@ -58,7 +58,8 @@ Deno.test("envia custos de 30 dias e cliques de 7 dias, com a chave no cabecalho
   assert(queries[0].includes("FROM campaign WHERE segments.date BETWEEN '2026-10-19' AND '2026-11-17'"));
   assert(queries[1].includes("FROM keyword_view WHERE segments.date BETWEEN '2026-10-19' AND '2026-11-17'"));
   const clickDays = queries.filter((q) => q.includes("FROM click_view")).map((q) => /'(\d{4}-\d{2}-\d{2})'/.exec(q)![1]);
-  assertEquals(clickDays, ["2026-11-17", "2026-11-16", "2026-11-15", "2026-11-14", "2026-11-13", "2026-11-12", "2026-11-11"]);
+  assertEquals(clickDays.length, 30);
+  assertEquals([clickDays[0], clickDays[1], clickDays[29]], ["2026-11-17", "2026-11-16", "2026-10-19"]);
 
   assertEquals(posts.length, 2);
   assertEquals(posts[0].url, "https://cnsmmwbqfbaimwexmtkx.supabase.co/functions/v1/ads-sync");

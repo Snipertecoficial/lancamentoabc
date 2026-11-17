@@ -38,7 +38,20 @@ test("aggregateAdsKeywords junta por palavra-chave e guarda a linha sem palavra-
   ]);
   expect(out).toHaveLength(2);
   expect(out[0]).toMatchObject({ criterion_id: "7001", keyword_text: "apartamento sbc", match_type: "PHRASE", cost: 40, leads: 2, cpl: 20, cpc: 4 });
-  expect(out[1]).toMatchObject({ criterion_id: null, keyword_text: null, leads: 2, cpl: 0 });
+  expect(out[1]).toMatchObject({ criterion_id: null, keyword_text: null, leads: 2, cpl: null });
+});
+
+test("leads sem custo no periodo nao viram custo por lead zero", () => {
+  const [c] = aggregateAdsCampaigns([{ day: "2026-11-10", campaign_id: "9", impressions: 0, clicks: 0, cost: "0", google_conversions: "0", leads: 3 }]);
+  expect(c.cpl).toBeNull();
+});
+
+test("palavras-chave sem estatistica do Google ficam separadas pelo texto", () => {
+  const out = aggregateAdsKeywords([
+    { day: "2026-11-10", campaign_id: "1", ad_group_id: "9", criterion_id: null, keyword_text: "casa sbc", cost: "0", leads: 1 },
+    { day: "2026-11-10", campaign_id: "1", ad_group_id: "9", criterion_id: null, keyword_text: "apto sbc", cost: "0", leads: 2 },
+  ]);
+  expect(out.map((k) => [k.keyword_text, k.leads])).toEqual([["apto sbc", 2], ["casa sbc", 1]]);
 });
 
 test("matchTypeLabel traduz o tipo de correspondencia", () => {

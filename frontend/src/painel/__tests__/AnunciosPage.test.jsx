@@ -121,6 +121,13 @@ test("palavras-chave com tipo de correspondencia e linha de leads sem palavra-ch
   expect(rows[0]).toContain("frase");
   expect(rows[0]).toContain("R$ 20,00");
   expect(rows[1]).toContain("Palavra-chave não identificada");
+  expect(rows[1]).toContain("sem custo");
+});
+
+test("avisa quando a conta do Google Ads usa outro fuso", async () => {
+  syncRows[0].time_zone = "America/New_York";
+  await mount();
+  expect(text()).toContain("usa o fuso America/New_York");
 });
 
 test("mostra quando o Google Ads foi atualizado", async () => {

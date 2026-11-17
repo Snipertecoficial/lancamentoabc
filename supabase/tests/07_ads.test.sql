@@ -18,11 +18,19 @@ declare
   l_u uuid := '00000000-0000-0000-0000-0000000007c3';
   l_n uuid := '00000000-0000-0000-0000-0000000007c4';
   l_st uuid := '00000000-0000-0000-0000-0000000007c5';
+  s_meta uuid := '00000000-0000-0000-0000-0000000007a6';  -- Meta ad that also carries campaign_id=111
+  s_fb uuid := '00000000-0000-0000-0000-0000000007a7';    -- facebook utm_campaign with a Google campaign name
+  s_unk uuid := '00000000-0000-0000-0000-0000000007a8';   -- Google, campaign_id not in ads_campaign_daily
+  s_kw2 uuid := '00000000-0000-0000-0000-0000000007a9';   -- Google, campaign_id + a keyword with no stats
+  l_meta uuid := '00000000-0000-0000-0000-0000000007c6';
+  l_fb uuid := '00000000-0000-0000-0000-0000000007c7';
+  l_unk uuid := '00000000-0000-0000-0000-0000000007c8';
+  l_kw2 uuid := '00000000-0000-0000-0000-0000000007c9';
   res jsonb; v text; n int; st text;
   vw text; anon_any boolean := false; inv_all boolean := true;
 begin
   begin
-    out := out || extensions.plan(20);
+    out := out || extensions.plan(23);
 
     -- 1st sync: 2 days of stats + clicks (one gclid twice in the payload)
     res := public.ads_ingest(jsonb_build_object(
@@ -73,13 +81,22 @@ begin
       (s_c, 'production', '2026-11-10 15:00+00', '2026-11-10 15:05+00', 'G-T7-UNKNOWN', '111', '901', 'Lancamento SBC', 'google', 'cpc', null, false),
       (s_u, 'production', '2026-11-10 16:00+00', '2026-11-10 16:05+00', null, null, null, null, 'google', 'cpc', 'sbc pesquisa', false),
       (s_n, 'production', '2026-11-10 17:00+00', '2026-11-10 17:05+00', null, null, null, null, null, null, null, false),
-      (s_st, 'staging', '2026-11-10 18:00+00', '2026-11-10 18:05+00', 'G-T7-ST', null, null, null, null, null, null, false);
+      (s_st, 'staging', '2026-11-10 18:00+00', '2026-11-10 18:05+00', 'G-T7-ST', null, null, null, null, null, null, false),
+      (s_unk, 'production', '2026-11-10 19:00+00', '2026-11-10 19:05+00', null, '999', null, null, 'google', 'cpc', null, false),
+      (s_kw2, 'production', '2026-11-10 20:00+00', '2026-11-10 20:05+00', null, '111', '901', 'casa sbc', 'google', 'cpc', null, false);
+    insert into public.sessions(id, env, started_at, last_event_at, fbclid, campaign_id, utm_source, utm_medium, utm_campaign, is_bot) values
+      (s_meta, 'production', '2026-11-10 19:10+00', '2026-11-10 19:15+00', 'FB-T7', '111', 'facebook', 'paid', null, false),
+      (s_fb, 'production', '2026-11-10 19:20+00', '2026-11-10 19:25+00', null, null, 'facebook', 'paid', 'SBC Pesquisa', false);
     insert into public.leads(id, env, phone_e164, first_session_id, submitted_at) values
       (l_g, 'production', '+5511900000701', s_g, '2026-11-10 14:04+00'),
       (l_c, 'production', '+5511900000702', s_c, '2026-11-10 15:04+00'),
       (l_u, 'production', '+5511900000703', s_u, '2026-11-11 02:30+00'),  -- 23:30 of 11-10 in Sao Paulo
       (l_n, 'production', '+5511900000704', s_n, '2026-11-10 17:04+00'),
-      (l_st, 'staging', '+5511900000705', s_st, '2026-11-10 18:04+00');
+      (l_st, 'staging', '+5511900000705', s_st, '2026-11-10 18:04+00'),
+      (l_meta, 'production', '+5511900000706', s_meta, '2026-11-10 19:14+00'),
+      (l_fb, 'production', '+5511900000707', s_fb, '2026-11-10 19:24+00'),
+      (l_unk, 'production', '+5511900000708', s_unk, '2026-11-10 19:04+00'),
+      (l_kw2, 'production', '+5511900000709', s_kw2, '2026-11-10 20:04+00');
 
     insert into auth.users(id, aud, role, email) values
       (admin_uid, 'authenticated', 'authenticated', 'admin-t7@example.invalid'),
@@ -101,16 +118,22 @@ begin
     out := out || extensions.is(v, 'utm_campaign/111/-/2026-11-10', 'utm_campaign igual ao nome da campanha (sem caixa); dia em Sao Paulo');
     select count(*) into n from public.panel_ads_lead_attribution where lead_id = l_n;
     out := out || extensions.is(n, 0, 'lead sem sinal de anuncio nao entra');
+    select count(*) into n from public.panel_ads_lead_attribution where lead_id = l_meta;
+    out := out || extensions.is(n, 0, 'anuncio da Meta com campaign_id nao vira lead do Google');
+    select count(*) into n from public.panel_ads_lead_attribution where lead_id = l_fb;
+    out := out || extensions.is(n, 0, 'utm_campaign do Facebook com nome igual a campanha do Google nao conta');
+    select count(*) into n from public.panel_ads_lead_attribution where lead_id = l_unk;
+    out := out || extensions.is(n, 0, 'campaign_id que nao existe no Google Ads nao conta');
 
     select day || ':' || cost || '/' || clicks || '/' || leads || '/' || google_conversions || '/' || coalesce(campaign_name, '-')
       into v from public.panel_ads_campaigns_daily where campaign_id = '111' and day = '2026-11-10';
-    out := out || extensions.is(v, '2026-11-10:80.5000000000000000/40/3/1/SBC Pesquisa', 'campanha no dia: custo em reais, cliques, 3 leads de producao (staging fora)');
+    out := out || extensions.is(v, '2026-11-10:80.5000000000000000/40/4/1/SBC Pesquisa', 'campanha no dia: custo em reais, cliques, 4 leads de producao (staging e Meta fora)');
     select cost::text || '/' || leads into v from public.panel_ads_campaigns_daily where campaign_id = '111' and day = '2026-11-09';
     out := out || extensions.is(v, '99.0000000000000000/0', 'dia so com custo: 0 leads');
 
-    select string_agg(coalesce(criterion_id, '-') || ':' || coalesce(keyword_text, '-') || ':' || leads || ':' || cost::numeric(12,2), ',' order by criterion_id nulls last)
+    select string_agg(coalesce(criterion_id, '-') || ':' || coalesce(keyword_text, '-') || ':' || leads || ':' || cost::numeric(12,2), ',' order by criterion_id nulls last, keyword_text nulls last)
       into v from public.panel_ads_keywords_daily where campaign_id = '111' and day = '2026-11-10';
-    out := out || extensions.is(v, '7001:apartamento sbc:1:60.00,7002:lancamento sbc:1:20.50,-:-:1:0.00', 'palavras-chave: custo e leads; lead sem palavra-chave em linha propria');
+    out := out || extensions.is(v, '7001:apartamento sbc:1:60.00,7002:lancamento sbc:1:20.50,-:casa sbc:1:0.00,-:-:1:0.00', 'palavras-chave: custo e leads; leads sem palavra-chave conhecida em linhas separadas');
     reset role;
 
     -- authenticated but not admin
