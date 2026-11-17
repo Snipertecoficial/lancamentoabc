@@ -181,7 +181,7 @@ function CopyValue({ value, label }) {
         type="button"
         onClick={copy}
         aria-label={`Copiar ${label}`}
-        className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-3 text-[13px] text-[#B8BEC5] transition-colors hover:border-[#7DB4E8]/50 hover:text-white sm:h-7 sm:px-2 sm:text-[12px] ${focusRing}`}
+        className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-3 text-[13px] text-[#B8BEC5] transition-colors hover:border-[#7DB4E8]/50 hover:text-white lg:h-7 lg:px-2 lg:text-[12px] ${focusRing}`}
       >
         {state === "ok" ? <Check className="h-3.5 w-3.5 text-[#4FD883]" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
         <span aria-live="polite">{state === "ok" ? "Copiado" : state === "fail" ? "Não copiou" : "Copiar"}</span>

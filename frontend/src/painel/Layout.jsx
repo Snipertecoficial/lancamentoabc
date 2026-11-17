@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Users, Filter, Radio, LogOut, Menu, X, ChevronLeft } from "lucide-react";
 import { signOut } from "./auth";
 import { useAdminUser } from "./RequireAdmin";
 import { useEnv, ENV_OPTIONS } from "./EnvContext";
-import { useScrollLock } from "./useScrollLock";
+import { useOverlay } from "./useOverlay";
 
 const NAV = [
   { to: "/painel", label: "Leads", icon: Users, match: (p) => p === "/painel" || p === "/painel/" || p.startsWith("/painel/leads") },
@@ -110,15 +110,21 @@ export default function Layout() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => { setMenuOpen(false); }, [pathname]);
-  useEffect(() => {
-    if (!menuOpen) return undefined;
-    const onKey = (e) => { if (e.key === "Escape") setMenuOpen(false); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [menuOpen]);
+  const drawer = useRef(null);
+  const drawerClose = useRef(null);
+  const menuButton = useRef(null);
 
-  useScrollLock(menuOpen);
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  // Modal drawer: focus in and back to the menu button, Tab kept inside, Escape closes, and it
+  // closes on its own once the viewport reaches the desktop sidebar (lg, 1024px).
+  useOverlay({
+    open: menuOpen,
+    onClose: () => setMenuOpen(false),
+    containerRef: drawer,
+    initialFocusRef: drawerClose,
+    returnFocusRef: menuButton,
+    closeAtQuery: "(min-width: 1024px)",
+  });
 
   const onSignOut = async () => {
     await signOut("global");
@@ -139,11 +145,13 @@ export default function Layout() {
           <button
             type="button"
             aria-label="Fechar menu"
+            tabIndex={-1}
             onClick={() => setMenuOpen(false)}
             className="absolute inset-0 bg-[#061224]/70 backdrop-blur-sm duration-200 animate-in fade-in motion-reduce:animate-none"
           />
-          <aside className="absolute inset-y-0 left-0 w-[19rem] max-w-[86vw] border-r border-white/[0.06] bg-[#061224] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)] shadow-2xl duration-200 animate-in slide-in-from-left motion-reduce:animate-none">
+          <aside ref={drawer} className="absolute inset-y-0 left-0 w-[19rem] max-w-[86vw] border-r border-white/[0.06] bg-[#061224] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)] shadow-2xl duration-200 animate-in slide-in-from-left motion-reduce:animate-none">
             <button
+              ref={drawerClose}
               type="button"
               aria-label="Fechar menu"
               onClick={() => setMenuOpen(false)}
@@ -180,6 +188,7 @@ export default function Layout() {
             </div>
             <EnvSwitch />
             <button
+              ref={menuButton}
               type="button"
               aria-label="Abrir menu"
               aria-expanded={menuOpen}

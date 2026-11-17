@@ -362,3 +362,59 @@ test("filters sheet (phones): opens as a dialog, counts active filters, Limpar r
   expect($('#filtros-leads[role="dialog"]')).toBeNull();
   expect(document.body.style.overflow).toBe("");
 });
+
+// Minimal matchMedia fake: fireMedia(query, true) simulates the viewport reaching the query.
+const mockMql = {};
+function installMatchMedia() {
+  window.matchMedia = (query) => {
+    mockMql[query] = mockMql[query] || { matches: false, listeners: [] };
+    const m = mockMql[query];
+    return {
+      get matches() { return m.matches; },
+      addEventListener: (_, fn) => m.listeners.push(fn),
+      removeEventListener: (_, fn) => { m.listeners = m.listeners.filter((l) => l !== fn); },
+    };
+  };
+}
+function fireMedia(query, matches) {
+  mockMql[query].matches = matches;
+  mockMql[query].listeners.slice().forEach((fn) => fn({ matches }));
+}
+const tabKey = (shiftKey = false) => act(async () => {
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true }));
+});
+
+describe("filters sheet as a modal", () => {
+  beforeEach(installMatchMedia);
+  afterEach(() => { delete window.matchMedia; Object.keys(mockMql).forEach((k) => delete mockMql[k]); });
+
+  test("sheet closes (no dialog role, scroll unlocked) when the viewport reaches 768px", async () => {
+    await mount();
+    await click($('button[aria-controls="filtros-leads"]'));
+    expect($('#filtros-leads[role="dialog"]')).not.toBeNull();
+    await act(async () => { fireMedia("(min-width: 768px)", true); });
+    await flush();
+    expect($('#filtros-leads[role="dialog"]')).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  test("Tab and Shift+Tab stay inside the sheet; focus returns to Filtros on close", async () => {
+    await mount();
+    const trigger = $('button[aria-controls="filtros-leads"]');
+    trigger.focus();
+    await click(trigger);
+    const sheet = $("#filtros-leads");
+    expect(sheet.contains(document.activeElement)).toBe(true);
+    const items = [...sheet.querySelectorAll("a[href],button:not([disabled]),input:not([disabled]),select:not([disabled])")];
+    items[items.length - 1].focus();
+    await tabKey();
+    expect(document.activeElement).toBe(items[0]);
+    await tabKey(true);
+    expect(document.activeElement).toBe(items[items.length - 1]);
+    $('input[type="search"]').focus(); // a page control outside the sheet
+    await tabKey();
+    expect(sheet.contains(document.activeElement)).toBe(true);
+    await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
+    expect(document.activeElement).toBe(trigger);
+  });
+});

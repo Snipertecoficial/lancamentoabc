@@ -4,7 +4,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Download, MessageCircle, RotateCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { supabase } from "../supabase";
 import { useEnv, ENV_OPTIONS } from "../EnvContext";
-import { useScrollLock } from "../useScrollLock";
+import { useOverlay } from "../useOverlay";
 import { PERIODS, periodRange, todaySP } from "../lib/period";
 import { applyLeadFilters } from "../lib/query";
 import { ORIGINS, AD_ORIGINS, originLabel, originTone } from "../lib/origin";
@@ -379,22 +379,20 @@ export default function LeadsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const sheetClose = useRef(null);
   const sheetTrigger = useRef(null);
+  const sheet = useRef(null);
   const listTop = useRef(null);
   const onOpen = useOpenLead();
-  useScrollLock(sheetOpen);
 
-  // Filters sheet (phones): focus moves in on open, Escape closes, focus returns to "Filtros".
-  useEffect(() => {
-    if (!sheetOpen) return undefined;
-    if (sheetClose.current) sheetClose.current.focus();
-    const onKey = (e) => { if (e.key === "Escape") setSheetOpen(false); };
-    document.addEventListener("keydown", onKey);
-    const trigger = sheetTrigger.current;
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      if (trigger) trigger.focus();
-    };
-  }, [sheetOpen]);
+  // Filters sheet (phones) is modal: focus in and back to "Filtros", Tab kept inside, Escape
+  // closes, and it closes on its own from md (768px), where the filters are inline again.
+  useOverlay({
+    open: sheetOpen,
+    onClose: () => setSheetOpen(false),
+    containerRef: sheet,
+    initialFocusRef: sheetClose,
+    returnFocusRef: sheetTrigger,
+    closeAtQuery: "(min-width: 768px)",
+  });
 
   // A new environment starts on page 1; reset during render so no request uses the old offset.
   const [pageEnv, setPageEnv] = useState(env);
@@ -537,6 +535,7 @@ export default function LeadsPage() {
         )}
         {/* One set of filter controls: a bottom sheet on phones, inline in this row from md up (md:contents). */}
         <div
+          ref={sheet}
           id="filtros-leads"
           role={sheetOpen ? "dialog" : undefined}
           aria-modal={sheetOpen ? "true" : undefined}

@@ -91,3 +91,55 @@ test("open menu locks page scroll; closing restores it", async () => {
   await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
   expect(document.body.style.overflow).toBe("");
 });
+
+// Minimal matchMedia fake: fireMedia(query, true) simulates the viewport reaching the query.
+const mockMql = {};
+function installMatchMedia() {
+  window.matchMedia = (query) => {
+    mockMql[query] = mockMql[query] || { matches: false, listeners: [] };
+    const m = mockMql[query];
+    return {
+      get matches() { return m.matches; },
+      addEventListener: (_, fn) => m.listeners.push(fn),
+      removeEventListener: (_, fn) => { m.listeners = m.listeners.filter((l) => l !== fn); },
+    };
+  };
+}
+function fireMedia(query, matches) {
+  mockMql[query].matches = matches;
+  mockMql[query].listeners.slice().forEach((fn) => fn({ matches }));
+}
+const tabKey = (shiftKey = false) => act(async () => {
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true }));
+});
+
+describe("drawer as a modal", () => {
+  beforeEach(installMatchMedia);
+  afterEach(() => { delete window.matchMedia; Object.keys(mockMql).forEach((k) => delete mockMql[k]); });
+
+  test("drawer closes and unlocks scroll when the viewport reaches desktop (1024px)", async () => {
+    await mount();
+    await act(async () => { container.querySelector('[aria-label="Abrir menu"]').click(); });
+    expect(container.querySelector('[role="dialog"]')).not.toBeNull();
+    await act(async () => { fireMedia("(min-width: 1024px)", true); });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  test("focus moves into the drawer, Tab stays inside, and returns to the menu button on close", async () => {
+    await mount();
+    const menu = container.querySelector('[aria-label="Abrir menu"]');
+    menu.focus();
+    await act(async () => { menu.click(); });
+    const panel = container.querySelector('[role="dialog"] aside');
+    expect(panel.contains(document.activeElement)).toBe(true);
+    const items = [...panel.querySelectorAll("a[href],button:not([disabled])")];
+    items[items.length - 1].focus();
+    await tabKey();
+    expect(document.activeElement).toBe(items[0]);
+    await tabKey(true);
+    expect(document.activeElement).toBe(items[items.length - 1]);
+    await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
+    expect(document.activeElement).toBe(menu);
+  });
+});
