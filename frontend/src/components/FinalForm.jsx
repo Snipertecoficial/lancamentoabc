@@ -74,7 +74,8 @@ const FinalForm = () => {
             </p>
           </Reveal>
 
-          <Reveal delay={150}>
+          {/* Phones: the form comes first, the unit list below it. */}
+          <Reveal delay={150} className="order-first lg:order-none">
             <div className="w-full">
               <LeadFormCard
                 title="Falar com corretor agora"

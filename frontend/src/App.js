@@ -41,10 +41,10 @@ const Home = () => {
           <HeroSection />
         
           <Suspense fallback={<div className="h-32" />}>
-            {/* 10. FAQ */}
-            <FAQ />
-            {/* 11. Final form — PENULTIMATE section */}
+            {/* 2. Lead form right after the hero (it used to sit ~5 phone screens down, after the FAQ) */}
             <FinalForm />
+            {/* 3. FAQ */}
+            <FAQ />
             {/* 12. 3D immersive gallery — LAST section */}
             <Slider3D />
           </Suspense>

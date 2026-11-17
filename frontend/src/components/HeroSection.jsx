@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Bed, Car, Waves, Ruler, Sparkles, PlayCircle, MessageCircle, CalendarCheck, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
 
@@ -13,21 +13,6 @@ const HeroSection = () => {
   const videoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
-
-  // Browsers block autoplay-with-sound outright, but a real user gesture
-  // anywhere on the page unlocks audio — so unmute on the first one.
-  useEffect(() => {
-    const unmuteOnFirstInteraction = () => {
-      const video = videoRef.current;
-      if (video && video.muted) {
-        video.muted = false;
-        setIsMuted(false);
-      }
-    };
-    const events = ["click", "touchstart", "scroll", "keydown"];
-    events.forEach((evt) => window.addEventListener(evt, unmuteOnFirstInteraction, { once: true, passive: true }));
-    return () => events.forEach((evt) => window.removeEventListener(evt, unmuteOnFirstInteraction));
-  }, []);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -51,9 +36,10 @@ const HeroSection = () => {
       {/* ─── TOP HALF: Text + Attributes ─── */}
       <div className="relative z-10 pt-24 md:pt-28 pb-10 md:pb-14">
         <div className="container-lp">
-          <div className="max-w-4xl mx-auto text-center">
+          {/* Phones: buttons come right after the text (before the cards), so they show on the first screen. */}
+          <div className="max-w-4xl mx-auto text-center flex flex-col sm:block">
             {/* Eyebrow */}
-            <div className="inline-flex items-center gap-2 mb-5">
+            <div className="inline-flex self-center items-center gap-2 mb-5">
               <Sparkles className="text-[#7DB4E8]" size={14} />
               <span className="font-sans font-semibold uppercase tracking-[0.28em] text-[0.7rem] text-[#7DB4E8]">
                 Lançamento · São Bernardo do Campo
@@ -71,7 +57,7 @@ const HeroSection = () => {
             </p>
 
             {/* Attribute cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto mb-8">
+            <div className="order-2 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl w-full mx-auto mb-8">
               {ATTRS.map((a, i) => (
                 <div key={i} className="premium-card p-3 md:p-4 text-center" data-testid={`hero-attr-${i}`}>
                   <a.icon className="mx-auto text-[#7DB4E8] mb-2" size={22} />
@@ -82,7 +68,7 @@ const HeroSection = () => {
             </div>
 
             {/* Primary CTAs */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-4" data-hero-ctas="">
+            <div className="order-1 sm:order-none flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-4" data-hero-ctas="">
               <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.hero, "hero_cta_whatsapp")} data-testid="hero-cta-whatsapp">
                 <PlayCircle size={16} /> Quero condições exclusivas
               </button>
@@ -92,7 +78,7 @@ const HeroSection = () => {
             </div>
 
             {/* Urgency badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#5B95CE]/10 border border-[#5B95CE]/30">
+            <div className="order-3 self-center inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#5B95CE]/10 border border-[#5B95CE]/30">
               <span className="w-2 h-2 bg-[#7DB4E8] rounded-full animate-pulse" />
               <span className="font-sans text-xs uppercase tracking-widest text-[#7DB4E8] font-semibold">
                 Lançamento — unidades limitadas

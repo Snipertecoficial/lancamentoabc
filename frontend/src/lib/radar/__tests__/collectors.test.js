@@ -131,4 +131,20 @@ describe("sections", () => {
     expect(track).not.toHaveBeenCalled();
     delete global.IntersectionObserver;
   });
+
+  test("sections mounted after start (lazy) are observed too, once each", async () => {
+    const observe = jest.fn();
+    global.IntersectionObserver = jest.fn(() => ({ observe, disconnect: jest.fn() }));
+    document.body.innerHTML = '<main><section id="top"></section></main>';
+    run(startSections);
+    expect(observe.mock.calls.map((c) => c[0].id)).toEqual(["top"]);
+    const wrap = document.createElement("div");
+    wrap.innerHTML = '<section id="faq"></section><section id="contato"></section><section></section>';
+    document.querySelector("main").appendChild(wrap);
+    await Promise.resolve(); // MutationObserver callbacks run as microtasks
+    document.querySelector("main").appendChild(document.createElement("p"));
+    await Promise.resolve();
+    expect(observe.mock.calls.map((c) => c[0].id)).toEqual(["top", "faq", "contato"]);
+    delete global.IntersectionObserver;
+  });
 });

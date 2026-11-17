@@ -34,7 +34,14 @@ export function start(track) {
     },
     { threshold: [0, 0.25, 0.5, 0.75, 1] }
   );
-  document.querySelectorAll("section[id]").forEach((el) => io.observe(el));
+  // Most sections are lazy (React.lazy) and mount after start: watch for them too.
+  const watched = new WeakSet();
+  const scan = () => document.querySelectorAll("section[id]").forEach((el) => {
+    if (!watched.has(el)) { watched.add(el); io.observe(el); }
+  });
+  scan();
+  const mo = typeof MutationObserver !== "undefined" ? new MutationObserver(scan) : null;
+  if (mo) mo.observe(document.body, { childList: true, subtree: true });
   // Hidden tab / pagehide: close every running clock (emit section_view) so hidden time is not counted.
   const onHide = () => {
     const now = Date.now();
@@ -49,6 +56,7 @@ export function start(track) {
   return () => {
     window.removeEventListener("pagehide", onHide);
     document.removeEventListener("visibilitychange", onVis);
+    if (mo) mo.disconnect();
     io.disconnect();
   };
 }

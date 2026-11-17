@@ -41,21 +41,22 @@ const CookieConsent = () => {
   if (!isVisible) return null;
 
   return (
-    <div id="cookie-consent" className="fixed bottom-4 left-4 z-50 max-w-xs md:max-w-sm bg-[#0A1A2E]/95 backdrop-blur-md border border-[#5B95CE]/30 p-4 rounded-2xl shadow-2xl flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700">
-      <p className="text-xs text-[#F5F2ED]/80 font-sans leading-relaxed">
-        Usamos cookies e identificadores para medir e melhorar nossos anúncios e esta página. Você pode aceitar ou recusar; ao aceitar, você consente com o uso descrito na nossa{" "}
+    // Slim bar on phones: the old card covered the hero's main button (and most visitors never answer it).
+    <div id="cookie-consent" className="fixed inset-x-0 bottom-0 z-50 bg-[#0A1A2E]/95 backdrop-blur-md border-t border-[#5B95CE]/30 px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700 md:inset-x-auto md:left-4 md:bottom-4 md:max-w-md md:rounded-2xl md:border md:p-3">
+      <p className="flex-1 min-w-0 text-[0.7rem] text-[#F5F2ED]/80 font-sans leading-snug">
+        Usamos cookies para medir nossos anúncios. Você pode aceitar ou recusar; veja a{" "}
         <a href="/privacidade" className="underline text-[#D9BB78] hover:text-white">Política de Privacidade</a>.
       </p>
-      <div className="flex flex-wrap justify-start gap-2">
+      <div className="flex shrink-0 gap-1.5">
         <button
           onClick={handleAccept}
-          className="text-xs font-semibold bg-[#D9BB78] text-[#0A1A2E] px-5 py-1.5 rounded-full hover:bg-white transition-colors"
+          className="text-xs font-semibold bg-[#D9BB78] text-[#0A1A2E] px-3.5 min-h-[36px] rounded-full hover:bg-white transition-colors"
         >
           Aceitar
         </button>
         <button
           onClick={handleReject}
-          className="text-xs font-semibold border border-[#F0F5FA]/30 text-[#F0F5FA] px-5 py-1.5 rounded-full hover:border-white transition-colors"
+          className="text-xs font-semibold border border-[#F0F5FA]/30 text-[#F0F5FA] px-3.5 min-h-[36px] rounded-full hover:border-white transition-colors"
         >
           Recusar
         </button>
