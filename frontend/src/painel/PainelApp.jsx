@@ -4,8 +4,9 @@ import { useNoIndex } from "./noindex";
 import { EnvProvider } from "./EnvContext";
 import RequireAdmin from "./RequireAdmin";
 import Layout from "./Layout";
+import LeadsPage from "./pages/LeadsPage";
 
-// Placeholders until the Leads, Lead, Funil and Ao vivo screens land.
+// Placeholders until the Lead, Funil and Ao vivo screens land.
 function Placeholder({ title, children }) {
   return (
     <section>
@@ -34,7 +35,7 @@ export default function PainelApp() {
       <RequireAdmin>
         <Routes>
           <Route element={<Layout />}>
-            <Route index element={<Placeholder title="Leads">A lista de leads, com origem, estágio e temperatura, aparece aqui.</Placeholder>} />
+            <Route index element={<LeadsPage />} />
             <Route path="leads/:id" element={<LeadPlaceholder />} />
             <Route path="funil" element={<Placeholder title="Funil & Campanhas">As etapas do funil e o desempenho de cada campanha aparecem aqui.</Placeholder>} />
             <Route path="ao-vivo" element={<Placeholder title="Ao vivo">Quem está no site agora aparece aqui.</Placeholder>} />
