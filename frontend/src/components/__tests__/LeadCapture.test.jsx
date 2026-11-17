@@ -36,11 +36,13 @@ class MockIO {
   observe(el) { this.targets.push(el); }
   disconnect() { this.targets = []; }
 }
-const setFormInView = async (visible) => {
+const fireIO = async (el, entry) => {
   await act(async () => {
-    observers.forEach((o) => { if (o.targets.length) o.cb(o.targets.map((target) => ({ target, isIntersecting: visible }))); });
+    observers.forEach((o) => { if (o.targets.includes(el)) o.cb([{ target: el, ...entry }]); });
   });
 };
+const setFormInView = (visible) => fireIO(document.getElementById("rd-form-section"),
+  { isIntersecting: visible, boundingClientRect: { top: 100, bottom: 600 } });
 
 const { LeadCaptureProvider } = require("../LeadCaptureProvider");
 const { openWhatsApp, WA_MESSAGES } = require("@/lib/whatsapp");
@@ -90,6 +92,23 @@ async function mount(el = <LeadCaptureProvider><Page /></LeadCaptureProvider>) {
   await act(async () => { root.render(el); });
   await flush();
 }
+// Home's hero: the CTA block the floating button waits to be scrolled past.
+const HeroPage = () => (
+  <>
+    <div data-hero-ctas="">
+      <button data-testid="hero-cta" onClick={() => openWhatsApp(WA_MESSAGES.hero, "hero_cta_whatsapp")}>Quero condições exclusivas</button>
+    </div>
+    <div id="rd-form-section"><div id="form-lead" /></div>
+  </>
+);
+const pressEsc = async () => {
+  await act(async () => {
+    (document.activeElement || document.body).dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  });
+  await flush();
+};
+const settleFocus = async () => { await act(async () => { jest.advanceTimersByTime(50); }); await flush(); };
+
 async function clickHero() {
   await act(async () => { $('[data-testid="hero-cta"]').click(); });
   await flush();
@@ -122,6 +141,31 @@ afterEach(async () => {
   delete global.IntersectionObserver;
   window.history.pushState({}, "", "/");
   jest.useRealTimers();
+});
+
+// Must stay the FIRST test of this file: React.lazy keeps the loaded chunk for the following tests.
+test("first open: an on-brand loading state shows while the modal chunk loads", async () => {
+  await mount();
+  act(() => { $('[data-testid="hero-cta"]').click(); }); // sync act: the lazy import has not resolved yet
+  const loading = $('[data-testid="lead-capture-loading"]');
+  expect(loading).not.toBeNull();
+  expect(loading.getAttribute("role")).toBe("status");
+  expect(loading.textContent).toMatch(/Carregando/);
+  await flush();
+  expect($('[data-testid="lead-capture-loading"]')).toBeNull();
+  expect(modalForm()).not.toBeNull();
+});
+
+test("modal chunk is prefetched when the browser is idle", async () => {
+  window.requestIdleCallback = jest.fn(() => 1);
+  window.cancelIdleCallback = jest.fn();
+  try {
+    await mount();
+    expect(window.requestIdleCallback).toHaveBeenCalledTimes(1);
+  } finally {
+    delete window.requestIdleCallback;
+    delete window.cancelIdleCallback;
+  }
 });
 
 describe("CTAs open the capture modal", () => {
@@ -167,6 +211,44 @@ describe("CTAs open the capture modal", () => {
     });
     await flush();
     expect(modalForm()).toBeNull();
+  });
+
+  test("closing returns focus to the CTA that opened it", async () => {
+    await mount();
+    const cta = $('[data-testid="hero-cta"]');
+    cta.focus();
+    await clickHero();
+    expect(document.activeElement).toBe(input("name"));
+    await pressEsc();
+    await settleFocus();
+    expect(modalForm()).toBeNull();
+    expect(document.activeElement).toBe(cta);
+  });
+
+  test("opened from the floating button (hidden while open): focus returns to it when it reappears", async () => {
+    await mount();
+    floating().focus();
+    await act(async () => { floating().click(); });
+    await flush();
+    expect(floating()).toBeNull();
+    await pressEsc();
+    await settleFocus();
+    expect(floating()).not.toBeNull();
+    expect(document.activeElement).toBe(floating());
+  });
+
+  test("floating opener that stays hidden after closing -> focus falls back to the first CTA", async () => {
+    await mount(<LeadCaptureProvider><HeroPage /></LeadCaptureProvider>);
+    const hero = $('[data-hero-ctas]');
+    await fireIO(hero, { isIntersecting: false, boundingClientRect: { top: -300, bottom: -200 } });
+    floating().focus();
+    await act(async () => { floating().click(); });
+    await flush();
+    await fireIO(hero, { isIntersecting: true, boundingClientRect: { top: 10, bottom: 110 } }); // back at the hero
+    await pressEsc();
+    await settleFocus();
+    expect(floating()).toBeNull();
+    expect(document.activeElement).toBe($('[data-testid="hero-cta"]'));
   });
 
   test("close button closes the modal", async () => {
@@ -223,6 +305,49 @@ describe("modal submit", () => {
     expect(navigator.sendBeacon).not.toHaveBeenCalled();
   });
 
+  test("while sending, the modal cannot be dismissed (X disabled, Esc ignored); after a failure it can", async () => {
+    let resolve;
+    global.fetch = jest.fn(() => new Promise((r) => { resolve = r; }));
+    await fillValid();
+    await clickSubmit();
+    const x = $('button[aria-label="Fechar"]');
+    expect(x.disabled).toBe(true);
+    await act(async () => { x.click(); });
+    await pressEsc();
+    expect(modalForm()).not.toBeNull();
+    await act(async () => { resolve(await res(500, { ok: false, error: "server" })); });
+    await flush();
+    expect($('button[aria-label="Fechar"]').disabled).toBe(false);
+    await pressEsc();
+    expect(modalForm()).toBeNull();
+  });
+
+  test("unmounted mid-submit + network failure -> beacon sent and pending lead saved anyway", async () => {
+    let reject;
+    global.fetch = jest.fn(() => new Promise((_, rj) => { reject = rj; }));
+    await fillValid();
+    await clickSubmit();
+    await act(async () => { root.unmount(); });
+    root = null;
+    await act(async () => { reject(new TypeError("Failed to fetch")); });
+    await flush();
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(sessionStorage.getItem("radar_pending_lead"))).toMatchObject({ name: "Ana Souza" });
+  });
+
+  test("unmounted mid-submit + success -> still navigates to /obrigado", async () => {
+    let resolve;
+    global.fetch = jest.fn(() => new Promise((r) => { resolve = r; }));
+    await fillValid();
+    await clickSubmit();
+    await act(async () => { root.unmount(); });
+    root = null;
+    await act(async () => { resolve(await res(200, { ok: true, lead_token: "tok-late" })); });
+    await flush();
+    expect(sessionStorage.getItem("radar_lead_token")).toBe("tok-late");
+    expect(mockNavigate).toHaveBeenCalledWith("/obrigado");
+  });
+
   test("validation errors: nothing sent, fields marked invalid, first invalid focused", async () => {
     await clickSubmit();
     expect(global.fetch).not.toHaveBeenCalled();
@@ -268,6 +393,11 @@ describe("modal submit", () => {
     expect(alert).not.toBeNull();
     const wa = alert.querySelector('a[href*="whatsapp.com"]');
     expect(wa).not.toBeNull();
+    // error state: a single primary green button (the chat); retry becomes a secondary outline button
+    const greens = [...$('[data-testid="lead-capture-modal"]').querySelectorAll(".btn-whatsapp")];
+    expect(greens).toEqual([wa]);
+    expect(submitBtn().classList.contains("btn-secondary-outline")).toBe(true);
+    expect(submitBtn().textContent).toBe("Tentar novamente");
     expect(decodeURIComponent(alert.innerHTML)).not.toMatch(/Ana|99999/);
     // the prefilled chat is only built on click
     await act(async () => { wa.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 })); });
@@ -359,6 +489,21 @@ describe("floating WhatsApp button", () => {
   test.each(["/login", "/painel", "/painel/leads", "/obrigado"])("never rendered on %s", async (path) => {
     window.history.pushState({}, "", path);
     await mount();
+    expect(floating()).toBeNull();
+  });
+
+  test("on the landing it waits until the hero CTAs were scrolled past", async () => {
+    await mount(<LeadCaptureProvider><HeroPage /></LeadCaptureProvider>);
+    expect(floating()).toBeNull();
+    const hero = $('[data-hero-ctas]');
+    await fireIO(hero, { isIntersecting: false, boundingClientRect: { top: 900, bottom: 1000 } }); // still below the fold
+    expect(floating()).toBeNull();
+    await fireIO(hero, { isIntersecting: false, boundingClientRect: { top: -300, bottom: -200 } }); // scrolled past
+    expect(floating()).not.toBeNull();
+    await setFormInView(true);
+    expect(floating()).toBeNull();
+    await setFormInView(false);
+    await fireIO(hero, { isIntersecting: true, boundingClientRect: { top: 10, bottom: 110 } }); // back up
     expect(floating()).toBeNull();
   });
 

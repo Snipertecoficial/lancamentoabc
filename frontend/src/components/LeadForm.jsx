@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { isRadarEnabled } from "@/lib/radar";
 import { submitLead } from "@/lib/radar/submitLead";
 import { isRescuable, rescueLead, clearPendingLead } from "@/lib/radar/pendingLead";
@@ -45,7 +45,8 @@ function waMessage({ name, phone, intent }) {
 
 // variant "full": the bottom form (name, WhatsApp, e-mail, intent).
 // variant "compact": the capture modal (name + WhatsApp only); `source` = the CTA that opened it.
-const LeadForm = ({ variant = "full", source = "site" }) => {
+// onSendingChange(bool) lets the modal refuse to close while the lead is in flight.
+const LeadForm = ({ variant = "full", source = "site", onSendingChange }) => {
   const compact = variant === "compact";
   const elementId = compact ? MODAL_FORM_ID : FORM_ID;
   const navigate = useNavigate();
@@ -134,15 +135,18 @@ const LeadForm = ({ variant = "full", source = "site" }) => {
     }
 
     setSending(true);
+    if (onSendingChange) onSendingChange(true);
     const result = await submitLead(lead);
-    if (!mounted.current) return;
+    // Both branches below run even if the form was unmounted meanwhile: the lead is never dropped.
     if (result.ok) {
       clearPendingLead();
-      navigate("/obrigado"); // lock stays on: the form is leaving
+      navigate("/obrigado"); // lock stays on: the form is leaving (navigate stays valid after unmount)
       return;
     }
     // No definitive answer from the server: beacon + one retry on the next load (pendingLead.js).
     if (isRescuable(result.error)) rescueLead(lead);
+    if (onSendingChange) onSendingChange(false);
+    if (!mounted.current) return;
     lockRef.current = false;
     setSending(false);
     const field = SERVER_FIELD_ERRORS[result.error];
@@ -249,9 +253,9 @@ const LeadForm = ({ variant = "full", source = "site" }) => {
             target="_blank"
             rel="noopener noreferrer"
             onClick={openChat}
-            className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 font-semibold text-white transition-colors hover:bg-[#20bd5a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            className="btn-whatsapp !mt-3 !flex min-h-[48px] w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           >
-            <MessageCircle size={18} aria-hidden="true" />
+            <WhatsAppIcon size={18} />
             Falar no WhatsApp
           </a>
         </div>
@@ -261,13 +265,15 @@ const LeadForm = ({ variant = "full", source = "site" }) => {
         type="submit"
         disabled={sending}
         aria-busy={sending ? "true" : "false"}
-        className={`${compact ? "btn-whatsapp" : "btn-gold"} w-full min-h-[52px] !mt-5 disabled:cursor-wait disabled:opacity-80 disabled:!transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1930]`}
+        className={`${!compact ? "btn-gold" : notice ? "btn-secondary-outline" : "btn-whatsapp"} w-full min-h-[52px] !mt-5 disabled:cursor-wait disabled:opacity-80 disabled:!transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1930]`}
       >
         {sending ? (
           <>
             <Loader2 size={18} className="animate-spin" aria-hidden="true" />
             Enviando…
           </>
+        ) : compact && notice ? (
+          "Tentar novamente" // the chat link above is the primary action now
         ) : compact ? (
           <>
             <WhatsAppIcon size={20} />

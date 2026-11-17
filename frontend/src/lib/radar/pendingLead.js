@@ -1,6 +1,7 @@
 import { RADAR_URL } from "./config";
 import { leadBody } from "./leadBody";
 import { submitLead } from "./submitLead";
+import { onPanelRoute } from "./routes";
 
 // "Pegar o contato de todo jeito": when submit-lead may never have reached the server, the lead
 // is not dropped. A beacon is fired at once (the browser delivers it even if it cannot read the
@@ -30,8 +31,9 @@ export function clearPendingLead() {
 
 // One silent attempt per stored lead: the key is removed before sending, so a failed retry is not
 // stored again. Never throws; resolves to submitLead's result, or null when nothing was pending.
+// Not on the admin panel: the lead stays stored for the next landing-page load.
 export async function retryPendingLead() {
-  if (!RADAR_URL) return null;
+  if (!RADAR_URL || onPanelRoute()) return null;
   let fields = null;
   try {
     const raw = sessionStorage.getItem(PENDING_KEY);

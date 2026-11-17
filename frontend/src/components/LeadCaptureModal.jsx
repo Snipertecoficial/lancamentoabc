@@ -14,7 +14,9 @@ const SURFACE = "bg-[linear-gradient(165deg,#12294A_0%,#0A1930_70%)] text-[#F0F5
 
 // Name + WhatsApp before any broker chat. Dialog on desktop, bottom sheet (vaul) below 768px.
 // Both trap focus, close on Esc / overlay / the X button, and put the cursor in "Nome" on open.
-const LeadCaptureModal = ({ open, source, mobile, onOpenChange }) => {
+// While `busy` (a lead in flight) nothing closes it: the provider ignores close requests, the X is
+// disabled and the sheet cannot be dragged away.
+const LeadCaptureModal = ({ open, source, mobile, busy = false, onBusyChange, onOpenChange, onCloseAutoFocus }) => {
   const contentRef = useRef(null);
   const formId = modalFormId(source);
 
@@ -36,7 +38,8 @@ const LeadCaptureModal = ({ open, source, mobile, onOpenChange }) => {
     <>
       <Close
         aria-label="Fechar"
-        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-[#F0F5FA]/70 transition-colors hover:bg-white/10 hover:text-[#F0F5FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8]"
+        disabled={busy}
+        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full text-[#F0F5FA]/70 transition-colors hover:bg-white/10 hover:text-[#F0F5FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8] disabled:pointer-events-none disabled:opacity-30"
       >
         <X size={20} aria-hidden="true" />
       </Close>
@@ -53,19 +56,20 @@ const LeadCaptureModal = ({ open, source, mobile, onOpenChange }) => {
         </Description>
       </div>
       <div className="mt-5">
-        <LeadForm variant="compact" source={source} />
+        <LeadForm variant="compact" source={source} onSendingChange={onBusyChange} />
       </div>
     </>
   );
 
   if (mobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
+      <Drawer open={open} onOpenChange={onOpenChange} dismissible={!busy} shouldScaleBackground={false}>
         <DrawerPortal>
           <DrawerOverlay className={OVERLAY} />
           <DrawerPrimitive.Content
             ref={contentRef}
             onOpenAutoFocus={focusName}
+            onCloseAutoFocus={onCloseAutoFocus}
             data-testid="lead-capture-modal"
             className={`fixed inset-x-0 bottom-0 z-[10021] flex max-h-[92dvh] flex-col rounded-t-[22px] border-t outline-none ${SURFACE}`}
           >
@@ -84,6 +88,7 @@ const LeadCaptureModal = ({ open, source, mobile, onOpenChange }) => {
         <DialogPrimitive.Content
           ref={contentRef}
           onOpenAutoFocus={focusName}
+          onCloseAutoFocus={onCloseAutoFocus}
           data-testid="lead-capture-modal"
           className={`fixed left-1/2 top-1/2 z-[10021] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[20px] border p-6 outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 md:p-7 ${SURFACE}`}
         >

@@ -94,3 +94,16 @@ test("radar disabled (no RADAR_URL) -> rescue and retry are no-ops", async () =>
   await expect(pending.retryPendingLead()).resolves.toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });
+
+test.each(["/login", "/painel", "/painel/leads"])("on the admin panel (%s) nothing is retried and the pending lead is kept", async (path) => {
+  const { pending } = load();
+  sessionStorage.setItem(pending.PENDING_KEY, JSON.stringify(fields));
+  window.history.pushState({}, "", path);
+  try {
+    await expect(pending.retryPendingLead()).resolves.toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(pending.PENDING_KEY)).not.toBeNull();
+  } finally {
+    window.history.pushState({}, "", "/");
+  }
+});
