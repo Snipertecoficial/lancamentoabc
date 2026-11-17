@@ -15,6 +15,11 @@ const LEAD_KEY = "radar_lead_token";
 let inited = false;
 let consentOverride = null; // set by the radar:consent event so the decision applies to the very next batch
 
+// The admin panel (/login, /painel/*) lives in the same app but is never tracked.
+function onPanelRoute() {
+  try { return /^\/(login|painel)(\/|$)/.test(location.pathname); } catch (e) { return false; }
+}
+
 function readCached() {
   try {
     const c = sessionStorage.getItem(ATTR_KEY);
@@ -74,7 +79,7 @@ const queue = createQueue({
 let stops = [];
 
 export function initRadar() {
-  if (inited || !RADAR_URL) return;
+  if (inited || !RADAR_URL || onPanelRoute()) return;
   inited = true;
   sessionMeta(); // pin the baseline attribution at init so later ad landings are detected as a change
   syncAttribution();
@@ -107,7 +112,7 @@ export function __stopRadar() {
 }
 
 export function track(type, props, opts) {
-  if (!RADAR_URL) return;
+  if (!RADAR_URL || onPanelRoute()) return;
   try {
     if (type === "page_view") syncAttribution();
     const e = { id: uuid(), type, ts: new Date().toISOString() };

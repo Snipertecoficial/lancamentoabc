@@ -16,6 +16,10 @@ const ScrollProgress = lazy(() => import("@/components/ScrollProgress"));
 const LLMContext = lazy(() => import("@/components/LLMContext"));
 const ThankYou = lazy(() => import("@/components/ThankYou"));
 
+// Admin panel: separate lazy chunks, so the LP bundle never carries supabase-js.
+const LoginPage = lazy(() => import("@/painel/LoginPage"));
+const PainelApp = lazy(() => import("@/painel/PainelApp"));
+
 const Home = () => {
   useEffect(() => {
     document.documentElement.style.scrollBehavior = "smooth";
@@ -52,7 +56,7 @@ const Home = () => {
 
 function App() {
   useEffect(() => {
-    initRadar(); // idempotent (safe under StrictMode); no-op without REACT_APP_RADAR_URL
+    initRadar(); // idempotent (safe under StrictMode); no-op without REACT_APP_RADAR_URL or on /login, /painel
   }, []);
 
   return (
@@ -62,6 +66,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/obrigado" element={<ThankYou />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/painel/*" element={<PainelApp />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

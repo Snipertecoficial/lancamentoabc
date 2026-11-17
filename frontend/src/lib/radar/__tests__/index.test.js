@@ -249,3 +249,37 @@ describe("campaign attribution refresh", () => {
     expect(b.session).toMatchObject({ gclid: "G1", utm_campaign: "lp" });
   });
 });
+
+describe("admin panel routes are not tracked", () => {
+  const hide = () => window.dispatchEvent(new Event("pagehide"));
+  const types = async (n) => JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[n][1])).events.map((e) => e.type);
+  afterEach(() => { window.history.replaceState({}, "", "/"); });
+
+  test("on / track enqueues", async () => {
+    window.history.replaceState({}, "", "/");
+    const r = load("https://r.test/fn"); r.initRadar();
+    r.track("cta_click");
+    hide();
+    expect(await types(0)).toEqual(["page_view", "cta_click"]);
+  });
+
+  test.each(["/painel/x", "/painel", "/login"])("initRadar on %s starts nothing and track drops", (path) => {
+    window.history.replaceState({}, "", path);
+    const r = load("https://r.test/fn"); r.initRadar();
+    r.track("cta_click");
+    hide();
+    window.history.pushState({}, "", path + "?y=1");
+    hide();
+    expect(navigator.sendBeacon).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test("SPA move from / to /login: events after the move are dropped", async () => {
+    window.history.replaceState({}, "", "/");
+    const r = load("https://r.test/fn"); r.initRadar();
+    window.history.pushState({}, "", "/login");
+    r.track("cta_click");
+    hide();
+    expect(await types(0)).toEqual(["page_view"]);
+  });
+});
