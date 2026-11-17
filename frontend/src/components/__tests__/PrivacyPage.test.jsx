@@ -37,6 +37,8 @@ test("PrivacyPage renders the key sections, controller data and contact e-mail",
   expect(text).toContain("sem identificador persistente");
   expect(text).toContain("quando ativado");
   expect(text).toContain("SHA-256");
+  expect(text).not.toContain("não pode ser lido");
+  expect(text).toContain("pseudonimizados");
   expect(text).toContain("não guardamos o seu IP em formato legível no nosso banco de dados");
   expect(text).toContain("até 13 meses");
   expect(text).toContain("em até 15 dias");

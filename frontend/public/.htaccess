@@ -1,6 +1,8 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  # Flag panel URLs (no [L], URL untouched) so mod_headers can add X-Robots-Tag below.
+  RewriteRule ^(login|painel)(/|$) - [E=PANEL_NOINDEX:1,NC]
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
@@ -9,12 +11,9 @@
 </IfModule>
 
 # Keep the admin panel out of search engines at the server level (the SPA also sets a noindex meta).
-# Matches /login and /painel (any case, with or without a trailing path); the rewrite above still serves index.html.
+# Only directives valid on Apache 2.2 and 2.4.
 <IfModule mod_headers.c>
-  # Expression-based: evaluated on the original request URI, so the internal rewrite to /index.html does not matter.
-  Header always set X-Robots-Tag "noindex, nofollow" "expr=%{REQUEST_URI} =~ m#^/(login|painel)(/|$)#i"
-  # Fallback via env var (REDIRECT_ prefix is what Apache gives it after an internal redirect).
-  SetEnvIf Request_URI "(?i)^/(login|painel)(/|$)" PANEL_NOINDEX
+  SetEnvIfNoCase Request_URI "^/(login|painel)(/|$)" PANEL_NOINDEX
   Header always set X-Robots-Tag "noindex, nofollow" env=PANEL_NOINDEX
   Header always set X-Robots-Tag "noindex, nofollow" env=REDIRECT_PANEL_NOINDEX
 </IfModule>

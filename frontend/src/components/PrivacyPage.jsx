@@ -97,8 +97,9 @@ const PrivacyPage = () => {
             "Google e Microsoft: métricas e anúncios",
           ]} />
           <p>
-            Para medir conversões de anúncios, dados de contato protegidos por hash (um resumo criptográfico SHA-256,
-            que não pode ser lido) podem ser enviados ao Google.
+            Para medir conversões de anúncios, dados de contato são transformados por hash (SHA-256) antes do envio ao Google,
+            portanto não são compartilhados em forma legível. Ainda assim, continuam sendo tratados como dados
+            pessoais (pseudonimizados).
           </p>
           <p>Não vendemos seus dados pessoais.</p>
         </Section>
