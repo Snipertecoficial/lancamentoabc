@@ -17,12 +17,12 @@ export function buildWhatsAppUrl(message = "", customPhone = null) {
 export function openWhatsApp(message = "", location = "site") {
   trackWhatsAppClick(location);
 
-  // Now redirects to the RD Station form section
+  // Scrolls to the lead form section (native form, #form-lead inside #rd-form-section)
   const formSection = document.getElementById("rd-form-section");
   if (formSection) {
     formSection.scrollIntoView({ behavior: "smooth", block: "center" });
     // Focus the form container if possible to draw attention
-    const rdContainer = document.getElementById("espontone-16aa058dd608303c1ceb");
+    const rdContainer = document.getElementById("form-lead");
     if (rdContainer) {
       rdContainer.classList.add("ring-4", "ring-[#C8A45D]", "ring-opacity-50", "rounded-lg", "transition-all", "duration-500");
       setTimeout(() => {

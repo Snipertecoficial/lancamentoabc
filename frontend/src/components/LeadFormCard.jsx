@@ -1,71 +1,12 @@
-import React, { useEffect } from "react";
-import { LEAD_FORM_ID, trackLeadFormSubmitAttempt } from "@/lib/tracking";
+import React from "react";
+import LeadForm from "@/components/LeadForm";
 
 const LeadFormCard = ({
   compact = false,
   testid = "lead-form",
 }) => {
-  useEffect(() => {
-    const configureSuccessRedirect = () => {
-      const container = document.getElementById(LEAD_FORM_ID);
-      const form = container?.querySelector("form");
-      if (!form) return false;
-
-      let redirectInput = form.querySelector('input[name="redirect_to"]');
-      if (!redirectInput) {
-        redirectInput = document.createElement("input");
-        redirectInput.type = "hidden";
-        redirectInput.name = "redirect_to";
-        form.appendChild(redirectInput);
-      }
-      redirectInput.value = `${window.location.origin}/obrigado`;
-      return true;
-    };
-
-    const container = document.getElementById(LEAD_FORM_ID);
-    const observer = new MutationObserver(() => {
-      if (configureSuccessRedirect()) observer.disconnect();
-    });
-    if (container) observer.observe(container, { childList: true, subtree: true });
-
-    // Capture phase so we see the native submit the instant the user clicks
-    // send, ahead of RD Station's own handler — diagnostic only, doesn't
-    // touch the event (no preventDefault).
-    const onSubmitAttempt = () => trackLeadFormSubmitAttempt();
-    if (container) container.addEventListener("submit", onSubmitAttempt, true);
-
-    // Inject RD Station script if not present
-    if (!document.getElementById("rd-station-script")) {
-      const script = document.createElement("script");
-      script.id = "rd-station-script";
-      script.src = "https://d335luupugsy2.cloudfront.net/js/rdstation-forms/stable/rdstation-forms.min.js";
-      script.type = "text/javascript";
-      script.async = true;
-      script.onload = () => {
-        if (window.RDStationForms) {
-          new window.RDStationForms(LEAD_FORM_ID, 'null').createForm();
-          configureSuccessRedirect();
-        }
-      };
-      document.body.appendChild(script);
-    } else {
-      // If script is already there, just create the form (e.g. navigation)
-      if (window.RDStationForms) {
-        // Clear container to avoid duplicates if re-rendered
-        const container = document.getElementById(LEAD_FORM_ID);
-        if (container) container.innerHTML = "";
-        new window.RDStationForms(LEAD_FORM_ID, 'null').createForm();
-        configureSuccessRedirect();
-      }
-    }
-
-    return () => {
-      observer.disconnect();
-      if (container) container.removeEventListener("submit", onSubmitAttempt, true);
-    };
-  }, []);
-
   return (
+    // id="rd-form-section" kept as an alias: CTAs (openWhatsApp) and the radar form_view collector use it.
     <div id="rd-form-section" className={`form-card !p-5 md:!p-6 ${compact ? "" : "lg:max-w-[400px] mx-auto"} relative`} data-testid={testid}>
       <div className="mb-3 text-center">
         <div className="section-eyebrow mb-1 text-[0.65rem]">Garanta sua unidade</div>
@@ -77,9 +18,8 @@ const LeadFormCard = ({
         </p>
       </div>
 
-      <div className="mt-4">
-        {/* RD Station Container */}
-        <div role="main" id={LEAD_FORM_ID} className="rd-custom-form"></div>
+      <div id="form-lead" className="mt-4 rounded-lg transition-shadow duration-500">
+        <LeadForm />
       </div>
     </div>
   );

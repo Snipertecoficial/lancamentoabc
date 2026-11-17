@@ -118,3 +118,59 @@ test("form_view once when #rd-form-section reaches 50% visible", () => {
   io.cb([{ isIntersecting: true, intersectionRatio: 0.9, target: io.el }]);
   expect(track.mock.calls.filter((c) => c[0] === "form_view")).toHaveLength(1);
 });
+
+describe("native lead form (LeadForm.jsx)", () => {
+  const NATIVE = `
+<form id="conversion-form-espontone" data-radar-native>
+  <input name="name" /><input name="phone" type="tel" /><input name="email" />
+  <button type="submit">Receber as tabelas</button>
+</form>`;
+  let f;
+  beforeEach(() => {
+    document.body.insertAdjacentHTML("beforeend", NATIVE);
+    f = document.getElementById("conversion-form-espontone");
+  });
+
+  test("phone-only form is recognized: form_start + form_field_complete {field:'phone'}", () => {
+    document.body.insertAdjacentHTML("beforeend", '<form id="p4"><input name="phone" /></form>');
+    const p = document.querySelector("#p4 [name=phone]");
+    focus(p);
+    p.value = "(11) 99999-9999";
+    p.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(track).toHaveBeenCalledWith("form_start", { form_id: "p4" });
+    expect(track).toHaveBeenCalledWith("form_field_complete", { field: "phone" });
+    expect(JSON.stringify(track.mock.calls)).not.toContain("99999");
+  });
+
+  test("form_start / form_field_complete / form_abandon on the native form", () => {
+    const p = f.querySelector('[name="phone"]');
+    focus(p);
+    p.value = "(11) 99999-9999";
+    p.dispatchEvent(new Event("change", { bubbles: true }));
+    window.dispatchEvent(new Event("pagehide"));
+    expect(track).toHaveBeenCalledWith("form_start", { form_id: "conversion-form-espontone" });
+    expect(track).toHaveBeenCalledWith("form_field_complete", { field: "phone" });
+    expect(track).toHaveBeenCalledWith("form_abandon", { last_field: "phone" });
+  });
+
+  test("submit tracks form_submit_attempt but never calls identifyLead (server records the lead)", () => {
+    focus(f.querySelector('[name="name"]'));
+    f.querySelector('[name="phone"]').value = "(11) 99999-9999";
+    submit(f);
+    expect(track).toHaveBeenCalledWith("form_submit_attempt", { form_id: "conversion-form-espontone" });
+    expect(identify).not.toHaveBeenCalled();
+  });
+
+  test("a failed attempt (form still on page) can still be abandoned; unmounted form is not", () => {
+    focus(f.querySelector('[name="name"]'));
+    submit(f);
+    window.dispatchEvent(new Event("pagehide"));
+    expect(track).toHaveBeenCalledWith("form_abandon", { last_field: "name" });
+    track.mockClear();
+    focus(f.querySelector('[name="phone"]'));
+    submit(f);
+    f.remove(); // success: SPA navigates to /obrigado and the form unmounts
+    window.dispatchEvent(new Event("pagehide"));
+    expect(track).not.toHaveBeenCalledWith("form_abandon", expect.anything());
+  });
+});

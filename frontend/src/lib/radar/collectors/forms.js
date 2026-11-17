@@ -1,4 +1,7 @@
-const isLeadForm = (f) => !!f && !!f.querySelector('input[name="mobile_phone"], input[name="personal_phone"], input[name="email"]');
+const isLeadForm = (f) => !!f && !!f.querySelector('input[name="phone"], input[name="mobile_phone"], input[name="personal_phone"], input[name="email"]');
+// Native form (LeadForm.jsx): the server's submit-lead already records the lead and its
+// lead_submitted event, so the collector must not identify it again.
+const isNative = (f) => f.hasAttribute("data-radar-native");
 const formOf = (el) => (el && el.closest ? el.closest("form") : null);
 const val = (f, n) => {
   const i = f.querySelector(`[name="${n}"]`);
@@ -33,9 +36,12 @@ export function start(track, identify) {
     const f = ev.target;
     if (!isLeadForm(f)) return;
     const formId = f.id || (f.parentElement && f.parentElement.id) || undefined;
+    track("form_submit_attempt", { form_id: formId });
+    // A native attempt may fail validation/network and stay on the page, so it can still be
+    // abandoned; on success the form unmounts (SPA) and onHide skips disconnected forms.
+    if (isNative(f)) return;
     started.delete(f);
     done.add(f);
-    track("form_submit_attempt", { form_id: formId });
     identify({ name: val(f, "name"), phone: val(f, "mobile_phone") || val(f, "personal_phone"), email: val(f, "email"), formId });
   });
 
