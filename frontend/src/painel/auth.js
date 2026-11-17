@@ -25,8 +25,17 @@ async function checkAdmin() {
 
 // "local" ends only this browser's session (forced sign-out of a non-admin); the "Sair" button
 // passes "global" to end the account's sessions everywhere.
+// A "global" call that fails (offline: supabase-js returns {error} without throwing) falls back to a
+// local sign-out, so the session in this browser is always cleared.
 export async function signOut(scope = "local") {
-  try { await supabase.auth.signOut({ scope }); } catch (e) { /* session is gone either way */ }
+  let failed = false;
+  try {
+    const r = await supabase.auth.signOut({ scope });
+    failed = !!(r && r.error);
+  } catch (e) { failed = true; }
+  if (failed && scope !== "local") {
+    try { await supabase.auth.signOut({ scope: "local" }); } catch (e) { /* session is gone either way */ }
+  }
 }
 
 export async function signIn(email, password) {

@@ -219,3 +219,23 @@ describe("useAdminSession", () => {
     root = createRoot(container); // afterEach unmounts again
   });
 });
+
+describe("signOut offline fallback", () => {
+  test("global error (offline, no throw) -> also clears the local session", async () => {
+    mockAuth.signOut.mockResolvedValueOnce({ error: { message: "Failed to fetch" } });
+    await signOut("global");
+    expect(mockAuth.signOut).toHaveBeenNthCalledWith(1, { scope: "global" });
+    expect(mockAuth.signOut).toHaveBeenNthCalledWith(2, { scope: "local" });
+  });
+
+  test("global ok -> no extra local call", async () => {
+    await signOut("global");
+    expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  test("global throws -> local fallback still runs and nothing is thrown", async () => {
+    mockAuth.signOut.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await expect(signOut("global")).resolves.toBeUndefined();
+    expect(mockAuth.signOut).toHaveBeenLastCalledWith({ scope: "local" });
+  });
+});

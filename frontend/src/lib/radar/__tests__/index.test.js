@@ -265,7 +265,7 @@ describe("admin panel routes are not tracked", () => {
     expect(await types(0)).toEqual(["page_view", "cta_click"]);
   });
 
-  test.each(["/painel/x", "/painel", "/login"])("initRadar on %s starts nothing and track drops", (path) => {
+  test.each(["/painel/x", "/painel", "/login", "/Painel/x", "/LOGIN"])("initRadar on %s starts nothing and track drops", (path) => {
     window.history.replaceState({}, "", path);
     const r = load("https://r.test/fn"); r.initRadar();
     r.track("cta_click");

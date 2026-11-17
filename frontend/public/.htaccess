@@ -7,3 +7,10 @@
   RewriteCond %{REQUEST_FILENAME} !-l
   RewriteRule . /index.html [L]
 </IfModule>
+
+# Keep the admin panel out of search engines at the server level (the SPA also sets a noindex meta).
+# Matches /login and /painel (any case, with or without a trailing path); the rewrite above still serves index.html.
+<IfModule mod_headers.c>
+  SetEnvIf Request_URI "(?i)^/(login|painel)(/|$)" PANEL_NOINDEX
+  Header set X-Robots-Tag "noindex, nofollow" env=PANEL_NOINDEX
+</IfModule>

@@ -43,7 +43,8 @@ const CookieConsent = () => {
   return (
     <div className="fixed bottom-4 left-4 z-50 max-w-xs md:max-w-sm bg-[#0A1A2E]/95 backdrop-blur-md border border-[#5B95CE]/30 p-4 rounded-2xl shadow-2xl flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5 duration-700">
       <p className="text-xs text-[#F5F2ED]/80 font-sans leading-relaxed">
-        Utilizamos cookies para melhorar a sua experiência. Ao continuar navegando, você concorda com a nossa política de privacidade (LGPD).
+        Usamos cookies e identificadores para medir e melhorar nossos anúncios e esta página. Você pode aceitar ou recusar; ao aceitar, você consente com o uso descrito na nossa{" "}
+        <a href="/privacidade" className="underline text-[#D9BB78] hover:text-white">Política de Privacidade</a>.
       </p>
       <div className="flex flex-wrap justify-start gap-2">
         <button

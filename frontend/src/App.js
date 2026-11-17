@@ -16,6 +16,7 @@ const CookieConsent = lazy(() => import("@/components/CookieConsent"));
 const ScrollProgress = lazy(() => import("@/components/ScrollProgress"));
 const LLMContext = lazy(() => import("@/components/LLMContext"));
 const ThankYou = lazy(() => import("@/components/ThankYou"));
+const PrivacyPage = lazy(() => import("@/components/PrivacyPage"));
 
 // Admin panel: separate lazy chunks, so the LP bundle never carries supabase-js.
 const LoginPage = lazy(() => import("@/painel/LoginPage"));
@@ -68,6 +69,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/obrigado" element={<ThankYou />} />
+              <Route path="/privacidade" element={<PrivacyPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/painel/*" element={<PainelApp />} />
             </Routes>

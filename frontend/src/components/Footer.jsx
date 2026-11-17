@@ -60,7 +60,7 @@ const Footer = () => {
               </a>
             </div>
             <div className="hidden md:block w-px h-4 bg-[#F0F5FA]/20"></div>
-            <a href="#" className="font-sans text-xs text-[#F0F5FA]/40 hover:text-[#7DB4E8] transition-colors">Política de Privacidade</a>
+            <a href="/privacidade" className="font-sans text-xs text-[#F0F5FA]/40 hover:text-[#7DB4E8] transition-colors">Política de Privacidade</a>
           </div>
         </div>
       </div>

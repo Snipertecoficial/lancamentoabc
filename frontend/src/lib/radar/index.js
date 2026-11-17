@@ -17,7 +17,7 @@ let consentOverride = null; // set by the radar:consent event so the decision ap
 
 // The admin panel (/login, /painel/*) lives in the same app but is never tracked.
 function onPanelRoute() {
-  try { return /^\/(login|painel)(\/|$)/.test(location.pathname); } catch (e) { return false; }
+  try { return /^\/(login|painel)(\/|$)/i.test(location.pathname); } catch (e) { return false; }
 }
 
 function readCached() {
