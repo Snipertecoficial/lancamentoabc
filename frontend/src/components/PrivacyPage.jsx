@@ -106,8 +106,8 @@ const PrivacyPage = () => {
 
         <Section title="7. Por quanto tempo guardamos">
           <List items={[
-            "Eventos de navegação: até 13 meses.",
-            "Dados de contato: enquanto houver interesse comercial ou até você pedir a exclusão.",
+            "Dados de navegação de visitantes que não se tornaram contato (lead): até 13 meses.",
+            "Dados de navegação e de contato ligados a um contato (lead): enquanto houver relacionamento comercial ou até você pedir a exclusão.",
           ]} />
         </Section>
 

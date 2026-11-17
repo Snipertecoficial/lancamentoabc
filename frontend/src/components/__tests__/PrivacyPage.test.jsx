@@ -40,7 +40,8 @@ test("PrivacyPage renders the key sections, controller data and contact e-mail",
   expect(text).not.toContain("não pode ser lido");
   expect(text).toContain("pseudonimizados");
   expect(text).toContain("não guardamos o seu IP em formato legível no nosso banco de dados");
-  expect(text).toContain("até 13 meses");
+  expect(text).toContain("visitantes que não se tornaram contato (lead): até 13 meses");
+  expect(text).toContain("Dados de navegação e de contato ligados a um contato (lead): enquanto houver relacionamento comercial ou até você pedir a exclusão");
   expect(text).toContain("em até 15 dias");
   expect(text).toContain("ANPD");
   expect(container.querySelector('a[href="mailto:contato@espontone.com.br"]')).not.toBeNull();

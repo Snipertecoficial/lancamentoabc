@@ -13,7 +13,9 @@
 # Keep the admin panel out of search engines at the server level (the SPA also sets a noindex meta).
 # Only directives valid on Apache 2.2 and 2.4.
 <IfModule mod_headers.c>
-  SetEnvIfNoCase Request_URI "^/(login|painel)(/|$)" PANEL_NOINDEX
+  <IfModule mod_setenvif.c>
+    SetEnvIfNoCase Request_URI "^/(login|painel)(/|$)" PANEL_NOINDEX
+  </IfModule>
   Header always set X-Robots-Tag "noindex, nofollow" env=PANEL_NOINDEX
   Header always set X-Robots-Tag "noindex, nofollow" env=REDIRECT_PANEL_NOINDEX
 </IfModule>
