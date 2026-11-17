@@ -2,6 +2,7 @@
 // User will provide phone number later. For now we use the click-to-chat
 // endpoint without number so it opens the WhatsApp chooser.
 import { trackWhatsAppClick } from "@/lib/tracking";
+import { openLeadCapture } from "@/lib/leadCapture";
 
 const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || "5511940383680"; // Ex: 5511999999999
 export function buildWhatsAppUrl(message = "", customPhone = null) {
@@ -14,10 +15,16 @@ export function buildWhatsAppUrl(message = "", customPhone = null) {
   return `https://api.whatsapp.com/send?text=${encoded}`;
 }
 
+// Every broker CTA first asks for name + WhatsApp (LeadCaptureModal); the chat itself only opens
+// after the lead is captured (/obrigado). `location` labels the GTM click and the modal's source.
 export function openWhatsApp(message = "", location = "site") {
   trackWhatsAppClick(location);
+  if (openLeadCapture({ source: location })) return;
+  scrollToLeadForm(); // no modal available: the old behaviour (bottom form), never WhatsApp directly
+}
 
-  // Scrolls to the lead form section (native form, #form-lead inside #rd-form-section)
+// Scrolls to the lead form section (native form, #form-lead inside #rd-form-section).
+export function scrollToLeadForm() {
   const formSection = document.getElementById("rd-form-section");
   if (formSection) {
     formSection.scrollIntoView({ behavior: "smooth", block: "center" });

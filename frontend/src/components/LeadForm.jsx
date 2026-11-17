@@ -3,13 +3,24 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, MessageCircle } from "lucide-react";
 import { isRadarEnabled } from "@/lib/radar";
 import { submitLead } from "@/lib/radar/submitLead";
+import { isRescuable, rescueLead, clearPendingLead } from "@/lib/radar/pendingLead";
+import { modalFormId } from "@/lib/leadCapture";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 import { trackLeadFormSubmitAttempt, trackWhatsAppClick } from "@/lib/tracking";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { formatPhoneBR, normalizePhoneBR, validateLead, ERRORS } from "@/lib/leadValidation";
 
 // Same id the RD Station form had: GTM's current form triggers keep firing (Plano 3 migrates them).
 export const FORM_ID = "conversion-form-espontone";
+// The capture modal's form: the id still contains FORM_ID, so the GTM "contains" trigger fires.
+export const MODAL_FORM_ID = `${FORM_ID}-modal`;
 const FIELD_ORDER = ["name", "phone", "email"];
+// The modal opens on a click, so "time since the form appeared" would flag a fast autofill (< 2 s)
+// as a bot; there the elapsed time counts from the page load instead.
+const PAGE_START = (() => {
+  const t = typeof performance !== "undefined" ? performance.timeOrigin : NaN;
+  return Number.isFinite(t) && t > 0 ? t : Date.now();
+})();
 const INTENTS = [
   { value: "morar", label: "Morar" },
   { value: "investir", label: "Investir" },
@@ -32,7 +43,11 @@ function waMessage({ name, phone, intent }) {
   return lines.join("\n");
 }
 
-const LeadForm = () => {
+// variant "full": the bottom form (name, WhatsApp, e-mail, intent).
+// variant "compact": the capture modal (name + WhatsApp only); `source` = the CTA that opened it.
+const LeadForm = ({ variant = "full", source = "site" }) => {
+  const compact = variant === "compact";
+  const elementId = compact ? MODAL_FORM_ID : FORM_ID;
   const navigate = useNavigate();
   const uid = useId();
   const id = (f) => `${uid}-${f}`;
@@ -47,7 +62,7 @@ const LeadForm = () => {
   const fieldRefs = { name: useRef(null), phone: useRef(null), email: useRef(null) };
   const hpRef = useRef(null);
   const lockRef = useRef(false); // synchronous guard: double click / Enter + click = one submission
-  const openedAt = useRef(Date.now());
+  const openedAt = useRef(compact ? PAGE_START : Date.now());
   const mounted = useRef(false);
   useEffect(() => {
     // Set in the body too: StrictMode (dev) runs mount -> cleanup -> mount on the same refs.
@@ -100,9 +115,9 @@ const LeadForm = () => {
       phone: normalizePhoneBR(values.phone),
       email: values.email.trim(),
       intent,
-      formId: FORM_ID,
+      formId: compact ? modalFormId(source) : FORM_ID,
       hp: hpRef.current ? hpRef.current.value : "",
-      elapsedMs: Date.now() - openedAt.current,
+      elapsedMs: Math.round(Date.now() - openedAt.current), // PAGE_START (timeOrigin) is fractional
     };
     const url = buildWhatsAppUrl(waMessage({ ...lead, phone: values.phone }));
 
@@ -122,9 +137,12 @@ const LeadForm = () => {
     const result = await submitLead(lead);
     if (!mounted.current) return;
     if (result.ok) {
+      clearPendingLead();
       navigate("/obrigado"); // lock stays on: the form is leaving
       return;
     }
+    // No definitive answer from the server: beacon + one retry on the next load (pendingLead.js).
+    if (isRescuable(result.error)) rescueLead(lead);
     lockRef.current = false;
     setSending(false);
     const field = SERVER_FIELD_ERRORS[result.error];
@@ -169,7 +187,7 @@ const LeadForm = () => {
   const optional = <span className="font-normal text-[#F0F5FA]/55"> (opcional)</span>;
 
   return (
-    <form id={FORM_ID} data-radar-native="" method="post" noValidate onSubmit={onSubmit} className="space-y-3.5 text-left">
+    <form id={elementId} data-radar-native="" method="post" noValidate onSubmit={onSubmit} className="space-y-3.5 text-left">
       <div>
         <label htmlFor={id("name")} className={labelCls}>Nome</label>
         <input {...fieldProps("name")} type="text" autoComplete="name" autoCapitalize="words" placeholder="Como podemos te chamar?" maxLength={120} />
@@ -182,13 +200,13 @@ const LeadForm = () => {
         {fieldError("phone")}
       </div>
 
-      <div>
+      {!compact && <div>
         <label htmlFor={id("email")} className={labelCls}>E-mail{optional}</label>
         <input {...fieldProps("email")} type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="nome@email.com" />
         {fieldError("email")}
-      </div>
+      </div>}
 
-      <fieldset>
+      {!compact && <fieldset>
         <legend className={labelCls}>Você pretende{optional}</legend>
         <div className="form-radio-group">
           {INTENTS.map((o) => (
@@ -208,7 +226,7 @@ const LeadForm = () => {
             </label>
           ))}
         </div>
-      </fieldset>
+      </fieldset>}
 
       {/* Honeypot: invisible to people and assistive tech; bots that fill every input reveal themselves. */}
       <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", top: "auto", width: 1, height: 1, overflow: "hidden" }}>
@@ -243,12 +261,17 @@ const LeadForm = () => {
         type="submit"
         disabled={sending}
         aria-busy={sending ? "true" : "false"}
-        className="btn-gold w-full min-h-[52px] !mt-5 disabled:cursor-wait disabled:opacity-80 disabled:!transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1930]"
+        className={`${compact ? "btn-whatsapp" : "btn-gold"} w-full min-h-[52px] !mt-5 disabled:cursor-wait disabled:opacity-80 disabled:!transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1930]`}
       >
         {sending ? (
           <>
             <Loader2 size={18} className="animate-spin" aria-hidden="true" />
             Enviando…
+          </>
+        ) : compact ? (
+          <>
+            <WhatsAppIcon size={20} />
+            Seguir para o atendimento
           </>
         ) : (
           "Receber as tabelas"
