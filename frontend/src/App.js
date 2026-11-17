@@ -5,6 +5,8 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { initRadar } from "@/lib/radar";
+import { retryPendingLead } from "@/lib/radar/pendingLead";
+import { LeadCaptureProvider } from "@/components/LeadCaptureProvider";
 
 // Lazy loaded components (below the fold)
 const FAQ = lazy(() => import("@/components/FAQ"));
@@ -28,37 +30,40 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A1930] text-[#F0F5FA] overflow-x-hidden w-full max-w-[100vw] relative">
-      <Suspense fallback={null}>
-        <ScrollProgress />
-      </Suspense>
-      <Header />
-      <main>
-        {/* 1. Hero — title + iPhone with video */}
-        <HeroSection />
-        
-        <Suspense fallback={<div className="h-32" />}>
-          {/* 10. FAQ */}
-          <FAQ />
-          {/* 11. Final form — PENULTIMATE section */}
-          <FinalForm />
-          {/* 12. 3D immersive gallery — LAST section */}
-          <Slider3D />
+    <LeadCaptureProvider>
+      <div className="min-h-screen bg-[#0A1930] text-[#F0F5FA] overflow-x-hidden w-full max-w-[100vw] relative">
+        <Suspense fallback={null}>
+          <ScrollProgress />
         </Suspense>
-      </main>
+        <Header />
+        <main>
+          {/* 1. Hero — title + iPhone with video */}
+          <HeroSection />
+        
+          <Suspense fallback={<div className="h-32" />}>
+            {/* 10. FAQ */}
+            <FAQ />
+            {/* 11. Final form — PENULTIMATE section */}
+            <FinalForm />
+            {/* 12. 3D immersive gallery — LAST section */}
+            <Slider3D />
+          </Suspense>
+        </main>
       
-      <Suspense fallback={null}>
-        <Footer />
-        <LLMContext />
-        <CookieConsent />
-      </Suspense>
-    </div>
+        <Suspense fallback={null}>
+          <Footer />
+          <LLMContext />
+          <CookieConsent />
+        </Suspense>
+      </div>
+    </LeadCaptureProvider>
   );
 };
 
 function App() {
   useEffect(() => {
     initRadar(); // idempotent (safe under StrictMode); no-op without REACT_APP_RADAR_URL or on /login, /painel
+    retryPendingLead(); // a lead whose submit failed in this tab gets one silent retry (pendingLead.js)
   }, []);
 
   return (
@@ -69,7 +74,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/obrigado" element={<ThankYou />} />
-              <Route path="/privacidade" element={<PrivacyPage />} />
+              <Route path="/privacidade" element={<LeadCaptureProvider><PrivacyPage /></LeadCaptureProvider>} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/painel/*" element={<PainelApp />} />
             </Routes>

@@ -271,3 +271,39 @@ test("StrictMode (dev double mount): submit completes and navigates to /obrigado
   expect(mockSubmitLead).toHaveBeenCalledTimes(1);
   expect(mockNavigate).toHaveBeenCalledWith("/obrigado");
 });
+
+test("safety net: network failure -> beacon + pending lead kept for one retry; success clears it", async () => {
+  navigator.sendBeacon = jest.fn(() => true);
+  try {
+    mockSubmitLead.mockResolvedValueOnce({ ok: false, error: "network" });
+    await fillValid({ email: "ana@x.com" });
+    await clickSubmit();
+    await flush();
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+    expect(navigator.sendBeacon.mock.calls[0][0]).toBe("https://r.test/fn/submit-lead");
+    expect(JSON.parse(sessionStorage.getItem("radar_pending_lead"))).toMatchObject({
+      name: "Ana Souza", phone: "+5511999999999", email: "ana@x.com", formId: "conversion-form-espontone",
+    });
+    expect(alertBox()).not.toBeNull(); // the WhatsApp alternative is still offered
+    await clickSubmit(); // retry succeeds
+    await flush();
+    expect(mockNavigate).toHaveBeenCalledWith("/obrigado");
+    expect(sessionStorage.getItem("radar_pending_lead")).toBeNull();
+  } finally {
+    delete navigator.sendBeacon;
+  }
+});
+
+test("rate limited -> no beacon, nothing pending", async () => {
+  navigator.sendBeacon = jest.fn(() => true);
+  try {
+    mockSubmitLead.mockResolvedValue({ ok: false, error: "rate_limited" });
+    await fillValid();
+    await clickSubmit();
+    await flush();
+    expect(navigator.sendBeacon).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem("radar_pending_lead")).toBeNull();
+  } finally {
+    delete navigator.sendBeacon;
+  }
+});

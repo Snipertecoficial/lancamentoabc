@@ -82,7 +82,7 @@ const HeroSection = () => {
             </div>
 
             {/* Primary CTAs */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-4" data-hero-ctas="">
               <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.hero, "hero_cta_whatsapp")} data-testid="hero-cta-whatsapp">
                 <PlayCircle size={16} /> Quero condições exclusivas
               </button>

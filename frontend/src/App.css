@@ -36,6 +36,39 @@
 .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 20px 40px -15px rgba(91,149,206,.85); filter: brightness(1.08); }
 .btn-gold:active { transform: translateY(0); }
 
+/* WhatsApp-destination CTA (capture modal, floating button). Dark ink on WhatsApp green keeps
+   the text readable (white on #25D366 is ~2:1). */
+.btn-whatsapp {
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+  padding: .9rem 1.4rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700; font-size: 1rem; letter-spacing: 0;
+  background: #25D366;
+  color: #052914;
+  border-radius: 999px;
+  border: none; cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+  box-shadow: 0 12px 28px -14px rgba(37,211,102,.75), inset 0 1px 0 rgba(255,255,255,.35);
+  white-space: nowrap;
+}
+.btn-whatsapp:hover { background: #2EE072; transform: translateY(-1px); }
+.btn-whatsapp:active { transform: translateY(0); }
+/* Secondary action next to a green primary (e.g. retry in the form's error state). */
+.btn-secondary-outline {
+  display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+  padding: .85rem 1.4rem;
+  font-family: 'Inter', sans-serif; font-weight: 600; font-size: 1rem;
+  background: transparent;
+  color: #F0F5FA;
+  border: 1px solid rgba(125,180,232,.55);
+  border-radius: 999px; cursor: pointer;
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.btn-secondary-outline:hover { background: rgba(125,180,232,.1); border-color: #7DB4E8; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-whatsapp, .btn-whatsapp:hover { transition: none; transform: none; }
+}
+
 .btn-outline-gold {
   display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
   padding: .85rem 1.4rem;

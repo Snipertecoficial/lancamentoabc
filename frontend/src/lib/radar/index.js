@@ -9,16 +9,12 @@ import * as sections from "./collectors/sections";
 import * as clicks from "./collectors/clicks";
 import * as video from "./collectors/video";
 import * as forms from "./collectors/forms";
+import { onPanelRoute } from "./routes";
 
 const ATTR_KEY = "rdr_attr";
 const LEAD_KEY = "radar_lead_token";
 let inited = false;
 let consentOverride = null; // set by the radar:consent event so the decision applies to the very next batch
-
-// The admin panel (/login, /painel/*) lives in the same app but is never tracked.
-function onPanelRoute() {
-  try { return /^\/(login|painel)(\/|$)/i.test(location.pathname); } catch (e) { return false; }
-}
 
 function readCached() {
   try {
