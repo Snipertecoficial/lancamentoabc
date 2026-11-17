@@ -1,78 +1,84 @@
 import { start } from "../collectors/forms";
 
-const RD = `
-<section id="rd-form-section"><div id="espontone-16aa058dd608303c1ceb">
-  <form id="conversion-form">
-    <input name="name" /><input name="email" /><input name="mobile_phone" />
-    <button type="submit">Enviar</button>
+// The page's lead form is the native LeadForm.jsx (RD Station removed). The server's submit-lead
+// records the lead itself, so the collector only emits behavioural events and never identifies.
+const NATIVE = `
+<section id="rd-form-section"><div id="form-lead">
+  <form id="conversion-form-espontone" data-radar-native method="post">
+    <input name="name" /><input name="phone" type="tel" /><input name="email" />
+    <button type="submit">Receber as tabelas</button>
   </form></div></section>`;
 const fill = (sel, v) => { const i = document.querySelector(sel); i.value = v; return i; };
 const focus = (el) => el.dispatchEvent(new Event("focusin", { bubbles: true }));
+const change = (el) => el.dispatchEvent(new Event("change", { bubbles: true }));
 const submit = (form) => {
   const ev = new Event("submit", { bubbles: true, cancelable: true });
   form.dispatchEvent(ev);
   return ev;
 };
+const form = () => document.getElementById("conversion-form-espontone");
 
-let track, identify, stop, observers;
+let track, stop, observers;
 beforeEach(() => {
-  document.body.innerHTML = RD;
+  document.body.innerHTML = NATIVE;
   track = jest.fn();
-  identify = jest.fn();
   observers = [];
   global.IntersectionObserver = class {
     constructor(cb) { this.cb = cb; observers.push(this); }
     observe(el) { this.el = el; }
     disconnect() {}
   };
-  stop = start(track, identify);
+  stop = start(track);
 });
 afterEach(() => { stop(); delete global.IntersectionObserver; });
 
-test("submit -> form_submit_attempt + identifyLead, never prevented", () => {
+test("submit -> form_submit_attempt only; never prevented; start takes no identify callback", () => {
+  expect(start.length).toBe(1);
   fill('[name="name"]', "Ana");
-  fill('[name="email"]', "a@x.com");
-  fill('[name="mobile_phone"]', "(11) 94038-3680");
-  const ev = submit(document.querySelector("form"));
+  fill('[name="phone"]', "(11) 94038-3680");
+  const ev = submit(form());
   expect(ev.defaultPrevented).toBe(false);
-  expect(identify).toHaveBeenCalledWith({
-    name: "Ana", phone: "(11) 94038-3680", email: "a@x.com", formId: "conversion-form",
-  });
-  expect(track).toHaveBeenCalledWith("form_submit_attempt", { form_id: "conversion-form" });
+  expect(track.mock.calls).toEqual([["form_submit_attempt", { form_id: "conversion-form-espontone" }]]);
 });
 
 test("typed values never appear in tracked events", () => {
   const i = fill('[name="email"]', "secret@x.com");
+  const p = fill('[name="phone"]', "(11) 99999-1234");
   focus(i);
-  i.dispatchEvent(new Event("change", { bubbles: true }));
-  submit(document.querySelector("form"));
+  change(i);
+  focus(p);
+  change(p);
+  submit(form());
   window.dispatchEvent(new Event("pagehide"));
-  expect(JSON.stringify(track.mock.calls)).not.toContain("secret@x.com");
+  const all = JSON.stringify(track.mock.calls);
+  expect(all).not.toContain("secret@x.com");
+  expect(all).not.toContain("99999");
 });
 
-test("a throwing identifyLead does not break submit", () => {
-  identify.mockImplementation(() => { throw new Error("x"); });
-  expect(() => submit(document.querySelector("form"))).not.toThrow();
+test("form_start once per form; form_field_complete only {field}", () => {
+  const p = document.querySelector('[name="phone"]');
+  focus(p);
+  focus(document.querySelector('[name="name"]'));
+  expect(track.mock.calls.filter((c) => c[0] === "form_start")).toEqual([["form_start", { form_id: "conversion-form-espontone" }]]);
+  p.value = "(11) 99999-9999";
+  change(p);
+  expect(track).toHaveBeenCalledWith("form_field_complete", { field: "phone" });
+  change(document.querySelector('[name="name"]')); // empty
+  expect(track.mock.calls.filter((c) => c[0] === "form_field_complete")).toHaveLength(1);
 });
 
-test("form injected after start (pop-up) is captured", () => {
+test("a phone-only form is recognized as a lead form", () => {
+  document.body.insertAdjacentHTML("beforeend", '<form id="p4"><input name="phone" /></form>');
+  focus(document.querySelector("#p4 [name=phone]"));
+  expect(track).toHaveBeenCalledWith("form_start", { form_id: "p4" });
+});
+
+test("a form injected after start is captured", () => {
   const d = document.createElement("div");
-  d.innerHTML = '<form id="popup"><input name="email" value="p@x.com" /></form>';
+  d.innerHTML = '<form id="popup"><input name="phone" /></form>';
   document.body.appendChild(d);
   submit(d.querySelector("form"));
-  expect(identify).toHaveBeenCalledWith({ name: "", phone: "", email: "p@x.com", formId: "popup" });
-});
-
-test("personal_phone is detected as lead form and used as phone", () => {
-  document.body.insertAdjacentHTML("beforeend", '<form id="p2"><input name="personal_phone" value="(11) 99999-0000" /></form>');
-  submit(document.getElementById("p2"));
-  expect(identify).toHaveBeenCalledWith({ name: "", phone: "(11) 99999-0000", email: "", formId: "p2" });
-});
-
-test("mobile_phone wins over personal_phone", () => {
-  document.body.insertAdjacentHTML("beforeend", '<form id="p3"><input name="mobile_phone" value="A" /><input name="personal_phone" value="B" /></form>');
-  submit(document.getElementById("p3"));
-  expect(identify.mock.calls[0][0].phone).toBe("A");
+  expect(track).toHaveBeenCalledWith("form_submit_attempt", { form_id: "popup" });
 });
 
 test("non-lead form is ignored", () => {
@@ -80,33 +86,29 @@ test("non-lead form is ignored", () => {
   const f = document.getElementById("search");
   focus(f.querySelector("input"));
   submit(f);
-  expect(identify).not.toHaveBeenCalled();
   expect(track).not.toHaveBeenCalled();
 });
 
-test("form_start once per form; form_field_complete only {field}", () => {
-  const e = document.querySelector('[name="email"]');
-  focus(e);
-  focus(document.querySelector('[name="name"]'));
-  expect(track.mock.calls.filter((c) => c[0] === "form_start")).toHaveLength(1);
-  e.value = "a@x.com";
-  e.dispatchEvent(new Event("change", { bubbles: true }));
-  expect(track).toHaveBeenCalledWith("form_field_complete", { field: "email" });
-  document.querySelector('[name="name"]').dispatchEvent(new Event("change", { bubbles: true })); // empty
-  expect(track.mock.calls.filter((c) => c[0] === "form_field_complete")).toHaveLength(1);
-});
-
 test("focus + pagehide without submit -> form_abandon {last_field}", () => {
-  focus(document.querySelector('[name="email"]'));
+  focus(document.querySelector('[name="phone"]'));
   window.dispatchEvent(new Event("pagehide"));
-  expect(track).toHaveBeenCalledWith("form_abandon", { last_field: "email" });
+  expect(track).toHaveBeenCalledWith("form_abandon", { last_field: "phone" });
 });
 
-test("no abandon without focus, nor after submit", () => {
+test("no abandon without focus", () => {
   window.dispatchEvent(new Event("pagehide"));
   expect(track).not.toHaveBeenCalledWith("form_abandon", expect.anything());
-  focus(document.querySelector('[name="email"]'));
-  submit(document.querySelector("form"));
+});
+
+test("a failed attempt (form still on page) can still be abandoned; an unmounted form is not", () => {
+  focus(document.querySelector('[name="name"]'));
+  submit(form());
+  window.dispatchEvent(new Event("pagehide"));
+  expect(track).toHaveBeenCalledWith("form_abandon", { last_field: "name" });
+  track.mockClear();
+  focus(document.querySelector('[name="phone"]'));
+  submit(form());
+  form().remove(); // success: SPA navigates to /obrigado and the form unmounts
   window.dispatchEvent(new Event("pagehide"));
   expect(track).not.toHaveBeenCalledWith("form_abandon", expect.anything());
 });
@@ -117,60 +119,4 @@ test("form_view once when #rd-form-section reaches 50% visible", () => {
   io.cb([{ isIntersecting: true, intersectionRatio: 0.6, target: io.el }]);
   io.cb([{ isIntersecting: true, intersectionRatio: 0.9, target: io.el }]);
   expect(track.mock.calls.filter((c) => c[0] === "form_view")).toHaveLength(1);
-});
-
-describe("native lead form (LeadForm.jsx)", () => {
-  const NATIVE = `
-<form id="conversion-form-espontone" data-radar-native>
-  <input name="name" /><input name="phone" type="tel" /><input name="email" />
-  <button type="submit">Receber as tabelas</button>
-</form>`;
-  let f;
-  beforeEach(() => {
-    document.body.insertAdjacentHTML("beforeend", NATIVE);
-    f = document.getElementById("conversion-form-espontone");
-  });
-
-  test("phone-only form is recognized: form_start + form_field_complete {field:'phone'}", () => {
-    document.body.insertAdjacentHTML("beforeend", '<form id="p4"><input name="phone" /></form>');
-    const p = document.querySelector("#p4 [name=phone]");
-    focus(p);
-    p.value = "(11) 99999-9999";
-    p.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(track).toHaveBeenCalledWith("form_start", { form_id: "p4" });
-    expect(track).toHaveBeenCalledWith("form_field_complete", { field: "phone" });
-    expect(JSON.stringify(track.mock.calls)).not.toContain("99999");
-  });
-
-  test("form_start / form_field_complete / form_abandon on the native form", () => {
-    const p = f.querySelector('[name="phone"]');
-    focus(p);
-    p.value = "(11) 99999-9999";
-    p.dispatchEvent(new Event("change", { bubbles: true }));
-    window.dispatchEvent(new Event("pagehide"));
-    expect(track).toHaveBeenCalledWith("form_start", { form_id: "conversion-form-espontone" });
-    expect(track).toHaveBeenCalledWith("form_field_complete", { field: "phone" });
-    expect(track).toHaveBeenCalledWith("form_abandon", { last_field: "phone" });
-  });
-
-  test("submit tracks form_submit_attempt but never calls identifyLead (server records the lead)", () => {
-    focus(f.querySelector('[name="name"]'));
-    f.querySelector('[name="phone"]').value = "(11) 99999-9999";
-    submit(f);
-    expect(track).toHaveBeenCalledWith("form_submit_attempt", { form_id: "conversion-form-espontone" });
-    expect(identify).not.toHaveBeenCalled();
-  });
-
-  test("a failed attempt (form still on page) can still be abandoned; unmounted form is not", () => {
-    focus(f.querySelector('[name="name"]'));
-    submit(f);
-    window.dispatchEvent(new Event("pagehide"));
-    expect(track).toHaveBeenCalledWith("form_abandon", { last_field: "name" });
-    track.mockClear();
-    focus(f.querySelector('[name="phone"]'));
-    submit(f);
-    f.remove(); // success: SPA navigates to /obrigado and the form unmounts
-    window.dispatchEvent(new Event("pagehide"));
-    expect(track).not.toHaveBeenCalledWith("form_abandon", expect.anything());
-  });
 });

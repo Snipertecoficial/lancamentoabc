@@ -27,7 +27,18 @@ describe("formatPhoneBR (mask)", () => {
     ["+55 (11) 99999-9999", "(11) 99999-9999"], // pasted with country code
     ["0 11 99999-9999", "(11) 99999-9999"], // trunk zero
     ["abc", ""],
+    ["+55 11 3333-4444", "(11) 3333-4444"], // pasted landline with country code
+    ["55999999999", "(55) 99999-9999"], // DDD 55 mobile is a local number: untouched
+    ["5533334444", "(55) 3333-4444"], // DDD 55 landline: untouched
+    ["559999999991", "(55) 99999-9999"], // 12th digit typed on a full DDD 55 mobile: ignored, not scrambled
   ])("%s -> %s", (raw, out) => expect(formatPhoneBR(raw)).toBe(out));
+
+  test("what the mask shows normalizes to what the server stores", () => {
+    expect(normalizePhoneBR(formatPhoneBR("55999999999"))).toBe("+5555999999999");
+    expect(normalizePhoneBR(formatPhoneBR("559999999991"))).toBe("+5555999999999");
+    expect(normalizePhoneBR(formatPhoneBR("+55 11 99999-9999"))).toBe(normalizePhoneBR("+55 11 99999-9999"));
+    expect(normalizePhoneBR(formatPhoneBR("+55 11 3333-4444"))).toBe(normalizePhoneBR("+55 11 3333-4444"));
+  });
 });
 
 describe("validateLead", () => {

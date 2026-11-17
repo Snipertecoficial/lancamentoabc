@@ -17,7 +17,7 @@ export function trackLeadConversion(userData) {
     event: "generate_lead",
     form_id: LEAD_FORM_ID,
     form_name: "espontone",
-    lead_source: "rd_station",
+    lead_source: "native_form",
   };
   // Enhanced Conversions: hashed first-party data confirmed server-side.
   if (userData) payload.user_data = userData;
@@ -30,7 +30,7 @@ export function trackLeadConversion(userData) {
       send_to: GA4_MEASUREMENT_ID,
       form_id: LEAD_FORM_ID,
       form_name: "espontone",
-      lead_source: "rd_station",
+      lead_source: "native_form",
     });
   }
 
@@ -62,8 +62,9 @@ export function trackWhatsAppClick(location = "site", { onComplete, timeout = 10
 }
 
 // Diagnostic signal only — fires the instant the user hits submit on the
-// RD Station form, before RD's own validation/AJAX runs. Do NOT wire this
-// to a Google Ads conversion trigger; use generate_lead for that.
+// native lead form (LeadForm.jsx), before client validation and the
+// submit-lead request. Do NOT wire this to a Google Ads conversion trigger;
+// use generate_lead for that.
 export function trackLeadFormSubmitAttempt() {
   pushDataLayer({
     event: "lead_form_submit_attempt",

@@ -36,7 +36,7 @@ function freshAttribution() {
   return readAttribution(location.href, document.referrer, navigator.userAgent, window.innerWidth);
 }
 
-function sessionMeta() {
+export function sessionMeta() {
   const c = readCached();
   if (c) return c;
   const a = freshAttribution();
@@ -88,7 +88,7 @@ export function initRadar() {
   // and the flush then includes it.
   // Collectors receive `track` as a parameter (avoids a circular import).
   [page, sections, clicks, video, forms].forEach((c) => {
-    try { stops.push(c.start(track, identifyLead)); } catch (e) { /* ignore */ }
+    try { stops.push(c.start(track)); } catch (e) { /* ignore */ }
   });
   try { stops.push(onConsentChange((granted) => { consentOverride = granted; if (!granted) clearVisitorId(); })); } catch (e) { /* ignore */ }
   try {
@@ -129,14 +129,6 @@ export function isRadarEnabled() {
 
 export function getLeadToken() {
   try { return sessionStorage.getItem(LEAD_KEY); } catch (e) { return null; }
-}
-
-export function identifyLead({ name, phone, email, formId }) {
-  const token = uuid();
-  try { sessionStorage.setItem(LEAD_KEY, token); } catch (e) { /* ignore */ }
-  track("lead_submitted", { lead_token: token, form_id: formId, name, phone, email });
-  try { queue.flush(true); } catch (e) { /* ignore */ }
-  return token;
 }
 
 export async function confirmLead(token, timeoutMs = 3000) {

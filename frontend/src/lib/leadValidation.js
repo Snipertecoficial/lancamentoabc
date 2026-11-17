@@ -14,10 +14,16 @@ export function normalizePhoneBR(raw) {
   return "+" + d;
 }
 
+// A 10-11 digit national number: DDD without zeros; mobiles (11) start with 9, landlines (10) with 2-5.
+const isNational = (d) =>
+  /^[1-9]{2}/.test(d) && ((d.length === 11 && d[2] === "9") || (d.length === 10 && /[2-5]/.test(d[2])));
+
 /** Mask "(11) 99999-9999" / "(11) 3333-4444". Strips a pasted +55 / trunk 0; keeps at most 11 digits. */
 export function formatPhoneBR(raw) {
   let d = String(raw || "").replace(/\D/g, "").replace(/^0+/, "");
-  if (d.length > 11 && d.startsWith("55")) d = d.slice(2);
+  // Strip a leading 55 only when it is clearly a country code (12-13 digits leaving a valid national
+  // number); a local DDD 55 number with an extra digit keeps its first 11 digits instead of shifting.
+  if ((d.length === 12 || d.length === 13) && d.startsWith("55") && isNational(d.slice(2))) d = d.slice(2);
   d = d.slice(0, 11);
   if (!d) return "";
   if (d.length <= 2) return `(${d}`;

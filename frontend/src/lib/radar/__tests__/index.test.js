@@ -52,17 +52,19 @@ test("batch has v, env, session_id, landing_url and event", () => {
   });
 });
 
-test("identifyLead returns token and stores it even if send fails", async () => {
+test("public API: identifyLead removed (server's submit-lead records leads); sessionMeta exported", () => {
   const r = load("https://r.test/fn");
-  const t = r.identifyLead({ name: "A", phone: "+5511999999999", email: "a@b.c", formId: "f" });
-  expect(t).toMatch(UUID);
-  expect(sessionStorage.getItem("radar_lead_token")).toBe(t);
-  expect(r.getLeadToken()).toBe(t);
-  const body = JSON.parse(await readBlob(navigator.sendBeacon.mock.calls[0][1]));
-  expect(body.events[0]).toMatchObject({
-    type: "lead_submitted",
-    props: { lead_token: t, form_id: "f", name: "A", phone: "+5511999999999", email: "a@b.c" },
-  });
+  expect(r.identifyLead).toBeUndefined();
+  expect(typeof r.sessionMeta).toBe("function");
+  expect(r.sessionMeta().landing_url).toMatch(/^http/);
+  expect(r.sessionMeta()).toEqual(JSON.parse(sessionStorage.getItem("rdr_attr")));
+});
+
+test("getLeadToken reads the token stored by submitLead", () => {
+  const r = load("https://r.test/fn");
+  expect(r.getLeadToken()).toBeNull();
+  sessionStorage.setItem("radar_lead_token", "tok");
+  expect(r.getLeadToken()).toBe("tok");
 });
 
 test("confirmLead parses ok, returns null on failure", async () => {

@@ -9,7 +9,10 @@ const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({ useNavigate: () => mockNavigate }), { virtual: true });
 
 let mockEnabled = true;
-jest.mock("@/lib/radar", () => ({ isRadarEnabled: () => mockEnabled }));
+jest.mock("@/lib/radar", () => ({
+  isRadarEnabled: () => mockEnabled,
+  sessionMeta: () => ({ landing_url: "http://localhost/" }), // used by the real submitLead (timeout test)
+}));
 
 const mockSubmitLead = jest.fn();
 jest.mock("@/lib/radar/submitLead", () => ({ submitLead: (...a) => mockSubmitLead(...a) }));
@@ -41,14 +44,17 @@ async function clickSubmit(times = 1) {
 }
 const flush = async () => { await act(async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); }); };
 
-async function mount() {
+async function mount({ strict = false } = {}) {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  await act(async () => { root.render(<LeadForm />); });
+  await act(async () => { root.render(strict ? <React.StrictMode><LeadForm /></React.StrictMode> : <LeadForm />); });
 }
+// Typed values that must never appear in a rendered href (GA4 outbound clicks / Clarity read hrefs).
+const PII = ["Ana", "Souza", "99999", "9999-9999", "ana@x.com", "ana%40x.com"];
+const expectNoPII = (href) => PII.forEach((v) => expect(decodeURIComponent(href)).not.toContain(v));
 
-let consoleErr;
+let consoleErr, openSpy;
 beforeEach(async () => {
   jest.useFakeTimers();
   sessionStorage.clear();
@@ -57,8 +63,8 @@ beforeEach(async () => {
   mockNavigate.mockReset();
   mockSubmitLead.mockReset();
   mockSubmitLead.mockResolvedValue({ ok: true, token: "tok-1" });
-  // jsdom reports navigation attempts as "Not implemented: navigation" errors.
   consoleErr = jest.spyOn(console, "error").mockImplementation(() => {});
+  openSpy = jest.spyOn(window, "open").mockImplementation(() => ({ opener: window }));
   await mount();
   await act(async () => { jest.advanceTimersByTime(3000); }); // a human takes > 2 s to fill the form
 });
@@ -66,13 +72,14 @@ afterEach(async () => {
   await act(async () => { root.unmount(); });
   container.remove();
   consoleErr.mockRestore();
+  openSpy.mockRestore();
   jest.useRealTimers();
 });
-const navigations = () => consoleErr.mock.calls.filter((c) => String(c[0] && (c[0].message || c[0])).includes("navigation")).length;
 
 test("form keeps the GTM id, has labelled fields, honeypot hidden from users, LGPD text with /privacidade", () => {
   expect(form().id).toBe("conversion-form-espontone");
   expect(form().noValidate).toBe(true);
+  expect(form().getAttribute("method")).toBe("post");
   ["name", "phone", "email"].forEach((n) => {
     const el = input(n);
     expect($(`label[for="${el.id}"]`)).not.toBeNull();
@@ -93,6 +100,17 @@ test("phone is masked while typing", async () => {
   expect(input("phone").value).toBe("(11) 99999-8888");
   await act(async () => { type(input("phone"), "+55 11 3333-4444"); });
   expect(input("phone").value).toBe("(11) 3333-4444");
+});
+
+test("a digit typed after a full DDD 55 number is ignored (no +55 strip scrambling the number)", async () => {
+  for (const full of ["(55) 99333-4444", "(55) 99999-9999"]) {
+    await act(async () => { type(input("phone"), full.replace(/\D/g, "")); });
+    expect(input("phone").value).toBe(full);
+    await act(async () => { type(input("phone"), full + "5"); }); // one more keystroke at the end
+    expect(input("phone").value).toBe(full);
+  }
+  await act(async () => { type(input("phone"), "+55 11 99999-9999"); }); // a paste still strips +55
+  expect(input("phone").value).toBe("(11) 99999-9999");
 });
 
 test("invalid submit: errors linked by aria-describedby, aria-invalid, first invalid focused, nothing sent", async () => {
@@ -146,16 +164,25 @@ test("sends normalized phone, trimmed fields, intent, honeypot and elapsed_ms", 
   expect(f.elapsedMs).toBeGreaterThanOrEqual(3000);
 });
 
-test("server error -> clear message + WhatsApp alternative with the lead's data; form usable again", async () => {
+test("server error -> message + WhatsApp alternative; href has no PII, click opens the prefilled chat; retry works", async () => {
   mockSubmitLead.mockResolvedValue({ ok: false, error: "server_error" });
-  await fillValid();
+  await fillValid({ email: "ana@x.com" });
   await clickSubmit();
   await flush();
   expect(mockNavigate).not.toHaveBeenCalled();
   expect(alertBox()).not.toBeNull();
   expect(alertBox().textContent).toMatch(/WhatsApp/);
-  const href = decodeURIComponent(waLink().getAttribute("href"));
-  expect(href).toContain("Ana Souza");
+  expectNoPII(waLink().getAttribute("href"));
+  expectNoPII(alertBox().innerHTML); // nothing in the rendered alert (text, href, attributes)
+
+  const click = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+  await act(async () => { waLink().dispatchEvent(click); });
+  expect(openSpy).toHaveBeenCalledTimes(1);
+  const opened = decodeURIComponent(openSpy.mock.calls[0][0]);
+  expect(opened).toContain("Ana Souza");
+  expect(opened).toContain("(11) 99999-9999");
+  expect(opened).not.toContain("ana@x.com"); // e-mail never goes into the message
+  expect(click.defaultPrevented).toBe(true); // the generic href is not followed when the window opened
   expect(button().disabled).toBe(false);
   await clickSubmit(); // retry is allowed
   expect(mockSubmitLead).toHaveBeenCalledTimes(2);
@@ -221,11 +248,26 @@ test("radar disabled -> no submitLead; opens WhatsApp prefilled with the lead (n
   await clickSubmit();
   expect(mockSubmitLead).not.toHaveBeenCalled();
   expect(mockNavigate).not.toHaveBeenCalled();
-  const href = decodeURIComponent(waLink().getAttribute("href"));
-  expect(href).toContain("Ana Souza");
-  expect(href).toContain("(11) 99999-9999");
-  expect(href).toMatch(/morar/i);
+  expectNoPII(waLink().getAttribute("href"));
   expect(window.dataLayer.filter((e) => e.event === "whatsapp_click")).toHaveLength(1);
-  await act(async () => { jest.advanceTimersByTime(1100); }); // GTM callback timeout -> navigate
-  expect(navigations()).toBe(1);
+  await act(async () => { jest.advanceTimersByTime(1100); }); // GTM callback timeout -> open the prefilled chat
+  expect(openSpy).toHaveBeenCalledTimes(1);
+  const [url, target] = openSpy.mock.calls[0];
+  expect(target).toBe("_self");
+  const opened = decodeURIComponent(url);
+  expect(opened).toContain("Ana Souza");
+  expect(opened).toContain("(11) 99999-9999");
+  expect(opened).toMatch(/morar/i);
+});
+
+test("StrictMode (dev double mount): submit completes and navigates to /obrigado", async () => {
+  await act(async () => { root.unmount(); });
+  container.remove();
+  await mount({ strict: true });
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  await fillValid();
+  await clickSubmit();
+  await flush();
+  expect(mockSubmitLead).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).toHaveBeenCalledWith("/obrigado");
 });

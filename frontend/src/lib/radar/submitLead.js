@@ -1,8 +1,9 @@
 import { RADAR_URL, RADAR_ENV } from "./config";
 import { getSessionId, getVisitorId } from "./ids";
 import { hasConsent } from "./consent";
+import { sessionMeta } from "./index";
 
-const LEAD_KEY = "radar_lead_token"; // same key identifyLead/getLeadToken use
+const LEAD_KEY = "radar_lead_token"; // the key getLeadToken (ThankYou) reads
 export const SUBMIT_TIMEOUT_MS = 8000;
 
 // Sends the native form to the submit-lead Edge Function. Never throws; always settles within
@@ -24,19 +25,20 @@ export async function submitLead(
   });
 
   const request = (async () => {
-    const body = {
-      env: RADAR_ENV,
-      session_id: getSessionId(),
-      visitor_id: getVisitorId(hasConsent()),
-      name,
-      phone,
-      form_id: formId,
-      hp: hp || "",
-      elapsed_ms: elapsedMs,
-    };
-    if (email) body.email = email;
-    if (intent) body.intent = intent;
     try {
+      const body = {
+        env: RADAR_ENV,
+        session_id: getSessionId(),
+        visitor_id: getVisitorId(hasConsent()),
+        session: sessionMeta(), // same SessionMeta as the ingest batches (landing_url, utm_*, gclid...)
+        name,
+        phone,
+        form_id: formId,
+        hp: hp || "",
+        elapsed_ms: elapsedMs,
+      };
+      if (email) body.email = email;
+      if (intent) body.intent = intent;
       const r = await fetch(`${RADAR_URL}/submit-lead`, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=UTF-8" }, // simple request: no CORS preflight

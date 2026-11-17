@@ -32,10 +32,24 @@ test("POSTs text/plain JSON with the contract fields to ${RADAR_URL}/submit-lead
   const b = JSON.parse(init.body);
   expect(b).toEqual({
     env: "staging", session_id: expect.stringMatching(UUID), visitor_id: null,
+    session: expect.objectContaining({ landing_url: expect.stringMatching(/^http/) }),
     name: "Ana Souza", phone: "+5511999999999", email: "ana@x.com", intent: "morar",
     form_id: "conversion-form-espontone", hp: "", elapsed_ms: 5123,
   });
   expect(b.session_id).toBe(sessionStorage.getItem("rdr_sid")); // same session the SDK uses
+});
+
+test("body carries the same SessionMeta the radar batches send (utm/gclid of the landing)", async () => {
+  window.history.pushState({}, "", "/?utm_source=google&utm_campaign=sbc&gclid=G123");
+  try {
+    const submitLead = load("https://r.test/fn");
+    await submitLead(fields);
+    const b = JSON.parse(global.fetch.mock.calls[0][1].body);
+    expect(b.session).toMatchObject({ utm_source: "google", utm_campaign: "sbc", gclid: "G123" });
+    expect(b.session).toEqual(JSON.parse(sessionStorage.getItem("rdr_attr"))); // the SDK's cached meta
+  } finally {
+    window.history.pushState({}, "", "/");
+  }
 });
 
 test("visitor_id is sent only with consent; optional fields omitted when empty", async () => {

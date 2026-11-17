@@ -1,18 +1,11 @@
 const isLeadForm = (f) => !!f && !!f.querySelector('input[name="phone"], input[name="mobile_phone"], input[name="personal_phone"], input[name="email"]');
-// Native form (LeadForm.jsx): the server's submit-lead already records the lead and its
-// lead_submitted event, so the collector must not identify it again.
-const isNative = (f) => f.hasAttribute("data-radar-native");
 const formOf = (el) => (el && el.closest ? el.closest("form") : null);
-const val = (f, n) => {
-  const i = f.querySelector(`[name="${n}"]`);
-  return i && typeof i.value === "string" ? i.value : "";
-};
 
-// Values are read only at submit (for identifyLead); no typed value ever goes into a tracked event.
-export function start(track, identify) {
-  const started = new Map(); // form -> last focused field name (forms with focus, not yet submitted)
+// Behavioural events only: the lead itself is recorded by the server's submit-lead (LeadForm.jsx).
+// No typed value is ever read into a tracked event.
+export function start(track) {
+  const started = new Map(); // form -> last focused field name
   const counted = new WeakSet(); // forms that already emitted form_start
-  const done = new WeakSet(); // forms already submitted (never abandoned)
   const safe = (fn) => { try { fn(); } catch (e) { /* never throw */ } };
 
   const onFocus = (ev) => safe(() => {
@@ -23,7 +16,7 @@ export function start(track, identify) {
       counted.add(f);
       track("form_start", { form_id: f.id || undefined });
     }
-    if (!done.has(f)) started.set(f, field);
+    started.set(f, field);
   });
 
   const onChange = (ev) => safe(() => {
@@ -36,13 +29,9 @@ export function start(track, identify) {
     const f = ev.target;
     if (!isLeadForm(f)) return;
     const formId = f.id || (f.parentElement && f.parentElement.id) || undefined;
+    // An attempt may fail validation/network and stay on the page, so it can still be abandoned;
+    // on success the form unmounts (SPA navigation) and onHide skips disconnected forms.
     track("form_submit_attempt", { form_id: formId });
-    // A native attempt may fail validation/network and stay on the page, so it can still be
-    // abandoned; on success the form unmounts (SPA) and onHide skips disconnected forms.
-    if (isNative(f)) return;
-    started.delete(f);
-    done.add(f);
-    identify({ name: val(f, "name"), phone: val(f, "mobile_phone") || val(f, "personal_phone"), email: val(f, "email"), formId });
   });
 
   const onHide = () => safe(() => {

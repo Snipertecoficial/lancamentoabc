@@ -22,9 +22,12 @@ const FAILURE_MESSAGES = {
   default: "Não foi possível enviar seus dados agora. Fale com um corretor pelo WhatsApp.",
 };
 
-function waMessage({ name, phone, email, intent }) {
+// The prefilled chat (name/phone) is only ever passed to window.open at click time; the rendered
+// href stays generic so GA4 outbound clicks and Clarity never capture the lead's data.
+const GENERIC_WA_URL = buildWhatsAppUrl("Oi! Quero receber as tabelas do lançamento em SBC.");
+
+function waMessage({ name, phone, intent }) {
   const lines = [`Oi! Meu nome é ${name}. Quero receber as tabelas do lançamento em SBC.`, `Meu WhatsApp: ${phone}.`];
-  if (email) lines.push(`E-mail: ${email}.`);
   if (intent) lines.push(`Objetivo: ${intent}.`);
   return lines.join("\n");
 }
@@ -45,16 +48,26 @@ const LeadForm = () => {
   const hpRef = useRef(null);
   const lockRef = useRef(false); // synchronous guard: double click / Enter + click = one submission
   const openedAt = useRef(Date.now());
-  const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  const mounted = useRef(false);
+  useEffect(() => {
+    // Set in the body too: StrictMode (dev) runs mount -> cleanup -> mount on the same refs.
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const update = (field, raw) => {
     let value = raw;
     if (field === "phone") {
       const digits = (str) => str.replace(/\D/g, "");
+      const prev = values.phone;
       // Backspace over a mask character ("-", ")", " ") removes the digit before it.
-      const deletedMaskChar = raw.length < values.phone.length && digits(raw) === digits(values.phone);
-      value = formatPhoneBR(deletedMaskChar ? digits(raw).slice(0, -1) : raw);
+      const deletedMaskChar = raw.length < prev.length && digits(raw) === digits(prev);
+      // One more keystroke on a complete number is ignored (a paste is a bigger change and still
+      // goes through the mask, which strips a pasted +55).
+      const oneCharInserted = raw.length === prev.length + 1 &&
+        [...raw].some((_, i) => raw.slice(0, i) + raw.slice(i + 1) === prev);
+      const typedPastFull = digits(prev).length === 11 && oneCharInserted;
+      value = typedPastFull ? prev : formatPhoneBR(deletedMaskChar ? digits(raw).slice(0, -1) : raw);
     }
     const next = { ...values, [field]: value };
     setValues(next);
@@ -99,7 +112,7 @@ const LeadForm = () => {
       trackWhatsAppClick("lead_form_fallback", {
         onComplete: () => {
           lockRef.current = false;
-          window.location.href = url;
+          window.open(url, "_self");
         },
       });
       return;
@@ -124,6 +137,16 @@ const LeadForm = () => {
     setNotice({ kind: "error", message: FAILURE_MESSAGES[result.error] || FAILURE_MESSAGES.default, url });
   };
 
+  // Opens the prefilled chat; if the browser blocks the window, the generic href is followed instead.
+  const openChat = (e) => {
+    if (notice.kind === "error") trackWhatsAppClick("lead_form_error");
+    const w = window.open(notice.url, "_blank");
+    if (w) {
+      try { w.opener = null; } catch (err) { /* ignore */ }
+      e.preventDefault();
+    }
+  };
+
   const fieldProps = (field) => ({
     id: id(field),
     name: field,
@@ -146,7 +169,7 @@ const LeadForm = () => {
   const optional = <span className="font-normal text-[#F0F5FA]/55"> (opcional)</span>;
 
   return (
-    <form id={FORM_ID} data-radar-native="" noValidate onSubmit={onSubmit} className="space-y-3.5 text-left">
+    <form id={FORM_ID} data-radar-native="" method="post" noValidate onSubmit={onSubmit} className="space-y-3.5 text-left">
       <div>
         <label htmlFor={id("name")} className={labelCls}>Nome</label>
         <input {...fieldProps("name")} type="text" autoComplete="name" autoCapitalize="words" placeholder="Como podemos te chamar?" maxLength={120} />
@@ -204,10 +227,10 @@ const LeadForm = () => {
         >
           <p>{notice.message}</p>
           <a
-            href={notice.url}
+            href={GENERIC_WA_URL}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={notice.kind === "error" ? () => trackWhatsAppClick("lead_form_error") : undefined}
+            onClick={openChat}
             className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 font-semibold text-white transition-colors hover:bg-[#20bd5a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           >
             <MessageCircle size={18} aria-hidden="true" />

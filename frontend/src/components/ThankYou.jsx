@@ -6,7 +6,7 @@ import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { trackLeadConversion, trackWhatsAppClick } from "@/lib/tracking";
 import { track, getLeadToken, confirmLead, isRadarEnabled } from "@/lib/radar";
 
-const CONFIRM_RETRIES = 2; // extra attempts when confirm-lead answers null (ingest may not have recorded the token yet)
+const CONFIRM_RETRIES = 2; // extra attempts when confirm-lead answers null (transient network/server failure)
 const RETRY_DELAY_MS = 700;
 const CLICK_MAX_WAIT_MS = 1500; // total budget on click: pending confirmation + GTM wait
 const GTM_WAIT_MS = 1000;
