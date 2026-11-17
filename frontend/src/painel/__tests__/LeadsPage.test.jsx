@@ -34,7 +34,7 @@ const mockDownload = jest.fn();
 jest.mock("../lib/csv", () => ({ ...jest.requireActual("../lib/csv"), downloadCSV: (...a) => mockDownload(...a) }));
 
 const LeadsPage = require("../pages/LeadsPage").default;
-const { EnvProvider } = require("../EnvContext");
+const { EnvProvider, useEnv } = require("../EnvContext");
 const { periodRange } = require("../lib/period");
 
 const LEAD = {
@@ -230,6 +230,29 @@ test("changing a filter goes back to page 1", async () => {
   await click(button("Próxima"));
   await choose($('select[aria-label="Origem"]'), "google_ads");
   expect(has(lastList(), "range", 0, 49)).toBe(true);
+});
+
+test("switching environment goes back to page 1 (no offset past the end of the other env)", async () => {
+  listResult = { data: [LEAD], count: 120, error: null };
+  let envApi;
+  function EnvProbe() { envApi = useEnv(); return null; }
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  await act(async () => {
+    root.render(<QueryClientProvider client={client}><EnvProvider><LeadsPage /><EnvProbe /></EnvProvider></QueryClientProvider>);
+  });
+  await flush();
+  await click(button("Próxima"));
+  await click(button("Próxima"));
+  expect(has(lastList(), "range", 100, 149)).toBe(true);
+  await act(async () => { envApi.setEnv("staging"); });
+  await flush();
+  const staging = listQueries().filter((q) => has(q, "eq", "env", "staging"));
+  expect(staging.length).toBeGreaterThan(0);
+  expect(staging.every((q) => has(q, "range", 0, 49))).toBe(true);
+  expect(container.textContent).toContain("1–50 de 120");
 });
 
 test("KPIs: totals, ads, WhatsApp and visit->lead rate from the funnel (filtered by env + day range)", async () => {

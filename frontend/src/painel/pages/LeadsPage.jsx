@@ -340,6 +340,13 @@ export default function LeadsPage() {
   const [exportError, setExportError] = useState(false);
   const onOpen = useOpenLead();
 
+  // A new environment starts on page 1; reset during render so no request uses the old offset.
+  const [pageEnv, setPageEnv] = useState(env);
+  if (pageEnv !== env) {
+    setPageEnv(env);
+    if (f.page !== 0) setF((p) => ({ ...p, page: 0 }));
+  }
+
   const range = periodRange(f);
   const setFilter = (key, value) => setF((p) => (p[key] === value ? p : { ...p, [key]: value, page: 0 }));
 
