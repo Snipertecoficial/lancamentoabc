@@ -53,7 +53,7 @@ const control = `h-11 rounded-lg border border-white/10 bg-[#061224] px-3 text-[
 const numberFmt = new Intl.NumberFormat("pt-BR");
 const pctFmt = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-function periodText(filters, range) {
+export function periodText(filters, range) {
   if (filters.period === "hoje") return "Hoje";
   if (filters.period === "30d") return "Últimos 30 dias";
   if (filters.period === "7d") return "Últimos 7 dias";
@@ -98,7 +98,7 @@ async function fetchKpis({ env, range }) {
 
 /* ---------- pieces ---------- */
 
-function Segmented({ label, options, value, onChange }) {
+export function Segmented({ label, options, value, onChange }) {
   return (
     <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-0.5 rounded-lg border border-white/10 bg-[#061224] p-0.5 md:flex md:gap-0">
       {options.map((o) => {

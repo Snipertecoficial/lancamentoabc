@@ -8,7 +8,7 @@ import { useOverlay } from "./useOverlay";
 
 const NAV = [
   { to: "/painel", label: "Leads", icon: Users, match: (p) => p === "/painel" || p === "/painel/" || p.startsWith("/painel/leads") },
-  { to: "/painel/funil", label: "Funil & Campanhas", icon: Filter, match: (p) => p.startsWith("/painel/funil") },
+  { to: "/painel/funil", label: "Funil & Campanhas", bar: "Funil", icon: Filter, match: (p) => p.startsWith("/painel/funil") },
   { to: "/painel/ao-vivo", label: "Ao vivo", icon: Radio, match: (p) => p.startsWith("/painel/ao-vivo") },
 ];
 
@@ -18,7 +18,7 @@ const focusRing = "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#
 function barFor(pathname) {
   if (pathname.startsWith("/painel/leads/")) return { title: "Lead", back: { to: "/painel", label: "Leads" } };
   const item = NAV.find((n) => n.match(pathname));
-  return { title: item ? item.label : "Radar", back: null };
+  return { title: item ? item.bar || item.label : "Radar", back: null };
 }
 
 function Brand() {
