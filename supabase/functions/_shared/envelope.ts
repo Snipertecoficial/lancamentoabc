@@ -39,6 +39,18 @@ const TYPES = new Set<string>(EVENT_TYPES);
 const isObj = (x: unknown): x is Record<string, unknown> =>
   typeof x === "object" && x !== null && !Array.isArray(x);
 
+/** Filtra o objeto `session` do cliente: só as chaves conhecidas, só strings. */
+export function parseSessionMeta(raw: unknown): SessionMeta {
+  const session: SessionMeta = {};
+  if (isObj(raw)) {
+    for (const k of SESSION_KEYS) {
+      const v = raw[k];
+      if (typeof v === "string") session[k] = v;
+    }
+  }
+  return session;
+}
+
 export function parseBatch(
   raw: string,
   now: Date,
@@ -63,13 +75,7 @@ export function parseBatch(
   if (!Array.isArray(j.events)) return { ok: false, error: "invalid events" };
   if (j.events.length > MAX_EVENTS) return { ok: false, error: "too many events" };
 
-  const session: SessionMeta = {};
-  if (isObj(j.session)) {
-    for (const k of SESSION_KEYS) {
-      const v = j.session[k];
-      if (typeof v === "string") session[k] = v;
-    }
-  }
+  const session = parseSessionMeta(j.session);
 
   const limit = now.getTime() + MAX_FUTURE_MS;
   const events: RadarEvent[] = [];

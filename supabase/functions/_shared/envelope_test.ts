@@ -44,3 +44,10 @@ Deno.test("descarta evento > 24h no futuro", () => {
   const g = parseBatch(batchWithTs(addHours(now, 23)), now);
   assertEquals([g.ok, g.ok && g.dropped], [true, 0]);
 });
+
+Deno.test("parseSessionMeta: só chaves conhecidas com valor string; não-objeto vira {}", async () => {
+  const { parseSessionMeta } = await import("./envelope.ts");
+  assertEquals(parseSessionMeta({ gclid: "G", utm_source: 1, x: "y", lang: "pt" }), { gclid: "G", lang: "pt" });
+  assertEquals(parseSessionMeta(null), {});
+  assertEquals(parseSessionMeta([1]), {});
+});

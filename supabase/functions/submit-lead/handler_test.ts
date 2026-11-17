@@ -94,6 +94,23 @@ Deno.test("valido: grava visitor, sessao, evento sem PII, depois recordLead; 200
   assertEquals(JSON.stringify(evs[0]).includes("9000"), false);
 });
 
+Deno.test("session meta do corpo chega em upsertSession (filtrada: só chaves conhecidas e strings)", async () => {
+  const { deps, calls } = fakeDeps();
+  const res = await handleSubmitLead(
+    post(body({ session: { gclid: "G1", utm_campaign: "C1", landing_url: "https://x/", evil: "x", lang: 5 } })),
+    deps,
+  );
+  assertEquals(res.status, 200);
+  const b = calls.session[0][0] as { session: Record<string, string> };
+  assertEquals(b.session, { gclid: "G1", utm_campaign: "C1", landing_url: "https://x/" });
+});
+
+Deno.test("sem session no corpo: meta vazia", async () => {
+  const { deps, calls } = fakeDeps();
+  await handleSubmitLead(post(body()), deps);
+  assertEquals((calls.session[0][0] as { session: unknown }).session, {});
+});
+
 Deno.test("ipHash: sha256 do IP do cliente (último x-forwarded-for) + salt + data UTC; user-agent repassado", async () => {
   const { deps, calls } = fakeDeps();
   await handleSubmitLead(post(body()), deps);

@@ -27,44 +27,19 @@ export function createDb(url: string, serviceRoleKey: string) {
 
   return {
     async upsertSession(b: Batch, ipHash: string, isBot: boolean, userAgent: string | null) {
-      const now = new Date().toISOString();
-      const s = b.session;
-      // 1) cria na primeira vez (started_at = 1º evento); no conflito não altera nada
-      check((await sb.from("sessions").upsert({
-        id: b.session_id,
-        visitor_id: b.visitor_id,
-        env: b.env,
-        started_at: firstTs(b, now),
-        last_event_at: now,
-        landing_url: s.landing_url ?? null,
-        referrer: s.referrer ?? null,
-        utm_source: s.utm_source ?? null,
-        utm_medium: s.utm_medium ?? null,
-        utm_campaign: s.utm_campaign ?? null,
-        utm_term: s.utm_term ?? null,
-        utm_content: s.utm_content ?? null,
-        gclid: s.gclid ?? null,
-        gbraid: s.gbraid ?? null,
-        wbraid: s.wbraid ?? null,
-        fbclid: s.fbclid ?? null,
-        keyword: s.keyword ?? null,
-        matchtype: s.matchtype ?? null,
-        campaign_id: s.campaign_id ?? null,
-        adgroup_id: s.adgroup_id ?? null,
-        device: s.device ?? null,
-        screen: s.screen ?? null,
-        lang: s.lang ?? null,
-        user_agent: userAgent,
-        ip_hash: ipHash,
-        is_bot: isBot,
-      }, { onConflict: "id", ignoreDuplicates: true })).error);
-      // 2) avança last_event_at
-      check((await sb.from("sessions").update({ last_event_at: now }).eq("id", b.session_id)).error);
-      // 3) visitor_id = coalesce(visitor_id, novo)
-      if (b.visitor_id) {
-        check((await sb.from("sessions").update({ visitor_id: b.visitor_id })
-          .eq("id", b.session_id).is("visitor_id", null)).error);
-      }
+      // Atômico (SQL upsert_session): cria a sessão; se já existe, só preenche meta NULL e avança last_event_at.
+      check((await sb.rpc("upsert_session", {
+        p: {
+          ...b.session,
+          id: b.session_id,
+          visitor_id: b.visitor_id,
+          env: b.env,
+          started_at: firstTs(b, new Date().toISOString()),
+          user_agent: userAgent,
+          ip_hash: ipHash,
+          is_bot: isBot,
+        },
+      })).error);
     },
 
     async upsertVisitor(b: Batch) {

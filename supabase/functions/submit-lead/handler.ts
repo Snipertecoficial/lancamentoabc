@@ -1,4 +1,5 @@
 import type { Batch, RadarEvent } from "../_shared/envelope.ts";
+import { parseSessionMeta } from "../_shared/envelope.ts";
 import { UUID_RE } from "../_shared/uuid.ts";
 import { normalizePhoneBR } from "../_shared/phone.ts";
 import { ipHashOf } from "../_shared/ip.ts";
@@ -99,7 +100,7 @@ export async function handleSubmitLead(req: Request, deps: SubmitLeadDeps): Prom
       ts: now.toISOString(),
       props: { form_id: p.form_id, ...(intent ? { intent } : {}), lead_token: leadToken, ip_hash: ipHash },
     };
-    const batch: Batch = { v: 1, env, session_id: sessionId, visitor_id: visitorId, session: {}, events: [event] };
+    const batch: Batch = { v: 1, env, session_id: sessionId, visitor_id: visitorId, session: parseSessionMeta(p.session), events: [event] };
 
     // visitors antes de sessions (FK sessions.visitor_id -> visitors); evento antes do lead (autolink).
     if (visitorId) await deps.upsertVisitor(batch);
