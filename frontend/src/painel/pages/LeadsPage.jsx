@@ -198,7 +198,7 @@ function StageTrack({ lead }) {
   );
 }
 
-function Temperature({ value }) {
+export function Temperature({ value }) {
   const t = temperatureInfo(value);
   return (
     <span className="inline-flex items-center gap-2 text-[13px] font-medium" style={{ color: t.color }}>
