@@ -1,6 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useNoIndex } from "./noindex";
+import { usePanelTitle, useViewportFitCover } from "./head";
 import { EnvProvider } from "./EnvContext";
 import RequireAdmin from "./RequireAdmin";
 import Layout from "./Layout";
@@ -19,6 +20,8 @@ function Placeholder({ title, children }) {
 
 export default function PainelApp() {
   useNoIndex();
+  usePanelTitle();
+  useViewportFitCover();
   return (
     <EnvProvider>
       <RequireAdmin>

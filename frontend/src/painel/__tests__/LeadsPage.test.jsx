@@ -331,3 +331,34 @@ test("CSV export fetches every page of the current filter in chunks of 1000", as
   expect(lines[1]).toContain("(11) 94038-3680");
   expect(text).not.toMatch(/ip_hash/);
 });
+
+test("phone cards: tap-to-chat WhatsApp with the number, link to the lead, temperature", async () => {
+  await mount();
+  const card = $("ul li");
+  expect(card.textContent).toContain("Ana Souza");
+  expect(card.textContent).toContain("Quente");
+  const wa = card.querySelector('a[href="https://wa.me/5511940383680"]');
+  expect(wa.textContent).toContain("(11) 94038-3680");
+  expect(wa.getAttribute("target")).toBe("_blank");
+  expect(card.querySelector(`a[href="/painel/leads/${LEAD.id}"]`)).not.toBeNull();
+});
+
+test("filters sheet (phones): opens as a dialog, counts active filters, Limpar resets them, Escape closes", async () => {
+  await mount();
+  const trigger = $('button[aria-controls="filtros-leads"]');
+  expect(trigger.textContent).toBe("Filtros");
+  await click(trigger);
+  expect($('#filtros-leads[role="dialog"]')).not.toBeNull();
+  expect(document.body.style.overflow).toBe("hidden");
+  await choose($('select[aria-label="Origem"]'), "meta_ads");
+  await click(button("Hoje"));
+  expect(trigger.textContent).toContain("2");
+  await click(button("Limpar"));
+  expect(has(lastList(), "eq", "origin", "meta_ads")).toBe(false);
+  const r = periodRange({ period: "7d" });
+  expect(has(lastList(), "gte", "created_at", r.fromIso)).toBe(true);
+  expect(trigger.textContent).toBe("Filtros");
+  await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
+  expect($('#filtros-leads[role="dialog"]')).toBeNull();
+  expect(document.body.style.overflow).toBe("");
+});

@@ -71,3 +71,23 @@ test("Sair signs out everywhere (global) and goes to /login", async () => {
   expect(mockSignOut).toHaveBeenCalledWith("global");
   expect(mockNavigate).toHaveBeenCalledWith("/login", { replace: true });
 });
+
+test("phone top bar names the section; a lead page shows a way back to Leads instead", async () => {
+  await mount();
+  expect(container.querySelector("header").textContent).toContain("Leads");
+  expect(container.querySelector('[aria-label="Voltar para Leads"]')).toBeNull();
+  await act(async () => { root.unmount(); });
+  container.remove();
+  mockPath = "/painel/leads/42";
+  await mount();
+  const back = container.querySelector('[aria-label="Voltar para Leads"]');
+  expect(back.getAttribute("href")).toBe("/painel");
+});
+
+test("open menu locks page scroll; closing restores it", async () => {
+  await mount();
+  await act(async () => { container.querySelector('[aria-label="Abrir menu"]').click(); });
+  expect(document.body.style.overflow).toBe("hidden");
+  await act(async () => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
+  expect(document.body.style.overflow).toBe("");
+});

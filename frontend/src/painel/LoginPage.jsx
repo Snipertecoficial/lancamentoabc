@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import EspontoneLogo from "@/components/EspontoneLogo";
 import { signIn, useAdminSession } from "./auth";
 import { useNoIndex } from "./noindex";
+import { usePanelTitle } from "./head";
 import Scope from "./Scope";
 
 const field =
@@ -12,6 +13,7 @@ const field =
 
 export default function LoginPage() {
   useNoIndex();
+  usePanelTitle();
   const { status } = useAdminSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");

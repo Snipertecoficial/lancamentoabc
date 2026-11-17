@@ -72,7 +72,7 @@ function gapText(ms) {
 
 function BackLink() {
   return (
-    <Link to="/painel" className={`inline-flex items-center gap-1.5 rounded text-[13px] font-medium text-[#7DB4E8] hover:text-white ${focusRing}`}>
+    <Link to="/painel" className={`hidden items-center gap-1.5 rounded text-[13px] font-medium text-[#7DB4E8] hover:text-white lg:inline-flex ${focusRing}`}>
       <ArrowLeft className="h-4 w-4" aria-hidden="true" />
       Leads
     </Link>
@@ -82,23 +82,28 @@ function BackLink() {
 function Milestones({ lead }) {
   const items = leadMilestones(lead);
   return (
-    <ol aria-label="Marcos do lead" className="grid grid-cols-3">
+    <ol aria-label="Marcos do lead" className="flex flex-col sm:grid sm:grid-cols-3">
       {items.map((m, i) => {
         const next = items[i + 1];
+        const link = next && next.done ? "bg-[#5B95CE]/70" : "border-dashed border-white/15";
         return (
-          <li key={m.key} data-done={String(m.done)} className="relative pr-2">
+          <li key={m.key} data-done={String(m.done)} className="relative flex items-center gap-3 py-2 sm:block sm:py-0 sm:pr-2">
             <div className="flex items-center">
               <span
                 aria-hidden="true"
                 className={`relative z-10 block h-3 w-3 shrink-0 rounded-full ${m.done ? "" : "border border-dashed border-white/30 bg-[#0A1930]"}`}
                 style={m.done ? { background: MILESTONE_DOT[m.key], boxShadow: `0 0 0 4px ${MILESTONE_DOT[m.key]}26` } : undefined}
               />
-              {next && (
-                <span aria-hidden="true" className={`ml-1 h-px flex-1 ${next.done ? "bg-[#5B95CE]/70" : "border-t border-dashed border-white/15"}`} />
-              )}
+              {next && <span aria-hidden="true" className={`ml-1 hidden h-px flex-1 sm:block ${next.done ? link : `border-t ${link}`}`} />}
             </div>
-            <p className={`mt-2.5 text-[13px] font-medium leading-snug ${m.done ? "text-white" : "text-[#8E8E8E]"}`}>{m.label}</p>
-            <p className={`mt-0.5 text-[12px] tabular-nums ${m.done ? "text-[#B8BEC5]" : "text-[#6F7782]"}`}>
+            {next && (
+              <span
+                aria-hidden="true"
+                className={`absolute left-[5.5px] top-[calc(50%+10px)] h-[calc(100%-20px)] sm:hidden ${next.done ? `w-px ${link}` : `border-l ${link}`}`}
+              />
+            )}
+            <p className={`min-w-0 flex-1 text-[15px] font-medium leading-snug sm:mt-2.5 sm:text-[13px] ${m.done ? "text-white" : "text-[#8E8E8E]"}`}>{m.label}</p>
+            <p className={`shrink-0 text-[13px] tabular-nums sm:mt-0.5 sm:text-[12px] ${m.done ? "text-[#B8BEC5]" : "text-[#6F7782]"}`}>
               {m.done ? formatShortDateTimeBR(m.at) : "Ainda não"}
             </p>
           </li>
@@ -110,9 +115,9 @@ function Milestones({ lead }) {
 
 function Fact({ label, children }) {
   return (
-    <div className="bg-[#0A1930] px-4 py-3.5 lg:px-5">
+    <div className="bg-[#0A1930] px-3.5 py-3 sm:px-4 sm:py-3.5 lg:px-5">
       <dt className="text-[12px] text-[#8E8E8E]">{label}</dt>
-      <dd className="mt-1 font-display text-[22px] font-semibold leading-tight text-white">{children}</dd>
+      <dd className="mt-1 font-display text-[20px] font-semibold leading-tight text-white sm:text-[22px]">{children}</dd>
     </div>
   );
 }
@@ -176,7 +181,7 @@ function CopyValue({ value, label }) {
         type="button"
         onClick={copy}
         aria-label={`Copiar ${label}`}
-        className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-2 text-[12px] text-[#B8BEC5] transition-colors hover:border-[#7DB4E8]/50 hover:text-white ${focusRing}`}
+        className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-md border border-white/10 px-3 text-[13px] text-[#B8BEC5] transition-colors hover:border-[#7DB4E8]/50 hover:text-white sm:h-7 sm:px-2 sm:text-[12px] ${focusRing}`}
       >
         {state === "ok" ? <Check className="h-3.5 w-3.5 text-[#4FD883]" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
         <span aria-live="polite">{state === "ok" ? "Copiado" : state === "fail" ? "Não copiou" : "Copiar"}</span>
@@ -187,9 +192,9 @@ function CopyValue({ value, label }) {
 
 function OriginRow({ label, children, field }) {
   return (
-    <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3 py-2.5">
+    <div className="grid grid-cols-1 gap-1 py-2.5 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:gap-3">
       <dt className="text-[13px] text-[#8E8E8E]">{label}</dt>
-      <dd data-field={field} className="min-w-0 break-words text-[13.5px] text-[#E8EEF5]">{children}</dd>
+      <dd data-field={field} className="min-w-0 break-words text-[15px] text-[#E8EEF5] sm:text-[13.5px]">{children}</dd>
     </div>
   );
 }
@@ -229,21 +234,21 @@ function TimelineItem({ event }) {
   return (
     <li
       data-milestone={String(milestone)}
-      className={`relative grid grid-cols-[2.75rem_1.75rem_minmax(0,1fr)] items-start gap-x-3 sm:grid-cols-[3.25rem_1.75rem_minmax(0,1fr)] ${milestone ? "py-2.5" : "py-1.5"}`}
+      className={`relative grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-start gap-x-3 sm:grid-cols-[3.25rem_1.75rem_minmax(0,1fr)] ${milestone ? "py-2.5" : "py-1.5"}`}
     >
-      <time dateTime={event.occurred_at} className="pt-[5px] text-right text-[12.5px] tabular-nums text-[#8E8E8E]">
+      <time dateTime={event.occurred_at} className="order-3 pt-[5px] text-right text-[12.5px] tabular-nums text-[#8E8E8E] sm:order-none">
         {formatTimeBR(event.occurred_at)}
       </time>
       <span
         aria-hidden="true"
-        className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border ${
+        className={`relative z-10 order-1 flex h-7 w-7 items-center justify-center rounded-full border sm:order-none ${
           milestone ? "border-transparent" : warn ? "border-[#D9BB78]/30 bg-[#0A1930] text-[#D9BB78]" : "border-white/10 bg-[#0A1930] text-[#8E9BAB]"
         }`}
         style={milestone ? { background: tone, color: "#061224", boxShadow: `0 0 0 5px ${tone}22` } : undefined}
       >
         <Icon className="h-3.5 w-3.5" strokeWidth={milestone ? 2.25 : 1.75} />
       </span>
-      <p className={milestone ? "pt-[3px] text-[15.5px] font-semibold leading-snug text-white" : "pt-[4px] text-[14px] leading-snug text-[#D5DBE2]"}>
+      <p className={`order-2 sm:order-none ${milestone ? "pt-[3px] text-[15.5px] font-semibold leading-snug text-white" : "pt-[4px] text-[15px] leading-snug text-[#D5DBE2] sm:text-[14px]"}`}>
         {labelFor(event)}
       </p>
     </li>
@@ -257,16 +262,19 @@ function Visit({ visit, previous }) {
   return (
     <section data-visit={visit.number} aria-labelledby={`visita-${visit.number}`}>
       {previous && gap > 30 * 60000 && (
-        <p className="mb-3 pl-[3.5rem] text-[12.5px] italic text-[#8E8E8E] sm:pl-[4rem]">Voltou {gapText(gap)}</p>
+        <p className="mb-3 pl-[2.5rem] text-[13px] italic text-[#8E8E8E] sm:pl-[4rem] sm:text-[12.5px]">Voltou {gapText(gap)}</p>
       )}
-      <h3 id={`visita-${visit.number}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <h3
+        id={`visita-${visit.number}`}
+        className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-white/[0.06] bg-[#0A1930]/95 px-4 py-2.5 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
+      >
         <span className="font-display text-[21px] font-semibold text-white">Visita {visit.number}</span>
         <span className="inline-flex items-center gap-1.5 font-sans text-[13px] tabular-nums text-[#B8BEC5]">
           <DeviceIcon className="h-3.5 w-3.5 self-center text-[#7DB4E8]" aria-hidden="true" />
           {[formatShortDateTimeBR(visit.startedAt), device, formatDuration(visit.durationMs)].filter(Boolean).join(" · ")}
         </span>
       </h3>
-      <ol className="relative mt-3 before:absolute before:bottom-4 before:left-[calc(2.75rem+0.75rem+0.875rem-0.5px)] before:top-4 before:w-px before:bg-white/[0.12] sm:before:left-[calc(3.25rem+0.75rem+0.875rem-0.5px)]">
+      <ol className="relative mt-3 before:absolute before:bottom-4 before:left-[calc(0.875rem-0.5px)] before:top-4 before:w-px before:bg-white/[0.12] sm:before:left-[calc(3.25rem+0.75rem+0.875rem-0.5px)]">
         {visit.items.map((e, i) => <TimelineItem key={`${e.occurred_at}-${i}`} event={e} />)}
       </ol>
     </section>
@@ -310,7 +318,7 @@ function Timeline({ query, visits, count }) {
     );
   }
   return (
-    <div className="space-y-9">
+    <div className="space-y-7 lg:space-y-9">
       {count >= EVENTS_LIMIT && (
         <p className="text-[13px] text-[#D9BB78]">Mostrando os primeiros {numberFmt.format(EVENTS_LIMIT)} passos deste lead.</p>
       )}
@@ -404,54 +412,54 @@ export default function LeadPage() {
     <div className="mx-auto max-w-[1200px]">
       <BackLink />
 
-      <header className="mt-4">
-        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-          <h1 className="min-w-0 break-words font-display text-[32px] font-semibold leading-[1.1] tracking-tight text-white lg:text-[40px]">
+      <header className="rounded-2xl border border-white/[0.07] bg-[#061224]/60 p-4 md:rounded-none md:border-0 md:bg-transparent md:p-0 lg:mt-4">
+        <div className="flex flex-col items-start gap-2.5 md:flex-row md:flex-wrap md:justify-between md:gap-x-6 md:gap-y-3">
+          <h1 className="min-w-0 break-words font-display text-[27px] font-semibold leading-[1.12] tracking-tight text-white md:text-[32px] md:leading-[1.1] lg:text-[40px]">
             {l.name || "Sem nome"}
           </h1>
-          <div className="pt-2"><Temperature value={l.temperature} /></div>
+          <div className="md:pt-2"><Temperature value={l.temperature} pill /></div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2.5 text-[14px]">
+        <div className="mt-4 flex flex-col gap-3 text-[15px] md:mt-3 md:flex-row md:flex-wrap md:items-center md:gap-x-5 md:gap-y-2.5 md:text-[14px]">
           {l.phone_e164 && (
-            <span className="inline-flex items-center gap-2.5">
+            <span className="flex flex-col gap-3 md:inline-flex md:flex-row md:items-center md:gap-2.5">
               <span className="tabular-nums text-[#E8EEF5]">{formatPhoneBR(l.phone_e164)}</span>
               {wa && (
                 <a
                   href={wa}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#25D366]/35 bg-[#25D366]/10 px-3 text-[13px] font-medium text-[#4FD883] transition-colors hover:bg-[#25D366]/20 ${focusRing}`}
+                  className={`inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-[16px] font-semibold text-[#06210F] transition-colors active:bg-[#1FB959] md:h-9 md:justify-start md:gap-1.5 md:rounded-lg md:border md:border-[#25D366]/35 md:bg-[#25D366]/10 md:px-3 md:text-[13px] md:font-medium md:text-[#4FD883] md:hover:bg-[#25D366]/20 ${focusRing}`}
                 >
-                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  <MessageCircle className="h-5 w-5 md:h-4 md:w-4" aria-hidden="true" />
                   Abrir WhatsApp
                 </a>
               )}
             </span>
           )}
           {l.email && (
-            <a href={`mailto:${l.email}`} className={`inline-flex min-w-0 items-center gap-1.5 break-all rounded text-[#B8BEC5] hover:text-[#7DB4E8] ${focusRing}`}>
+            <a href={`mailto:${l.email}`} className={`inline-flex min-h-11 min-w-0 items-center gap-2 break-all rounded text-[#B8BEC5] hover:text-[#7DB4E8] md:min-h-0 md:gap-1.5 ${focusRing}`}>
               <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
               {l.email}
             </a>
           )}
         </div>
-        <p className="mt-2 text-[13px] text-[#8E8E8E]">Chegou em {formatDateTimeBR(l.created_at)}</p>
+        <p className="mt-1 text-[13px] text-[#8E8E8E] md:mt-2">Chegou em {formatDateTimeBR(l.created_at)}</p>
 
-        <div className="mt-7 max-w-2xl">
+        <div className="mt-4 max-w-2xl border-t border-white/[0.06] pt-2 sm:pt-4 md:mt-7 md:border-0 md:pt-0">
           <Milestones lead={l} />
         </div>
       </header>
 
-      <div className="mt-8">
+      <div className="mt-5 md:mt-8">
         <Summary summary={summary} />
       </div>
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
+      <div className="mt-8 grid gap-8 md:mt-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
         <aside className="lg:order-2">
           <div className="lg:sticky lg:top-20"><OriginCard lead={l} /></div>
         </aside>
         <section aria-labelledby="linha-do-tempo" className="min-w-0 lg:order-1">
-          <h2 id="linha-do-tempo" className="mb-5 font-display text-[24px] font-semibold text-white">Linha do tempo</h2>
+          <h2 id="linha-do-tempo" className="mb-3 font-display text-[24px] font-semibold text-white lg:mb-5">Linha do tempo</h2>
           <Timeline query={events} visits={visits} count={evs.length} />
         </section>
       </div>

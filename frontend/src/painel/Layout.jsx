@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Users, Filter, Radio, LogOut, Menu, X } from "lucide-react";
+import { Users, Filter, Radio, LogOut, Menu, X, ChevronLeft } from "lucide-react";
 import { signOut } from "./auth";
 import { useAdminUser } from "./RequireAdmin";
 import { useEnv, ENV_OPTIONS } from "./EnvContext";
+import { useScrollLock } from "./useScrollLock";
 
 const NAV = [
   { to: "/painel", label: "Leads", icon: Users, match: (p) => p === "/painel" || p === "/painel/" || p.startsWith("/painel/leads") },
@@ -12,6 +13,13 @@ const NAV = [
 ];
 
 const focusRing = "focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8]";
+
+// Compact top bar (below lg): the current section's name, or a way back from a lead.
+function barFor(pathname) {
+  if (pathname.startsWith("/painel/leads/")) return { title: "Lead", back: { to: "/painel", label: "Leads" } };
+  const item = NAV.find((n) => n.match(pathname));
+  return { title: item ? item.label : "Radar", back: null };
+}
 
 function Brand() {
   return (
@@ -32,6 +40,10 @@ function EnvSwitch() {
       <div role="radiogroup" aria-label="Ambiente dos dados" className="flex rounded-lg border border-white/10 bg-[#061224] p-0.5">
         {ENV_OPTIONS.map((o) => {
           const on = env === o.value;
+          // Test data gets an amber tint so it is never mistaken for the real numbers.
+          const onTone = o.value === "staging"
+            ? "bg-[#D9BB78]/15 text-[#E9CF93] shadow-[inset_0_0_0_1px_rgba(217,187,120,0.4)]"
+            : "bg-[#12294A] text-white shadow-[inset_0_0_0_1px_rgba(125,180,232,0.35)]";
           return (
             <button
               key={o.value}
@@ -39,8 +51,8 @@ function EnvSwitch() {
               role="radio"
               aria-checked={on}
               onClick={() => setEnv(o.value)}
-              className={`h-8 rounded-md px-3 text-[13px] font-medium transition-colors ${focusRing} ${
-                on ? "bg-[#12294A] text-white shadow-[inset_0_0_0_1px_rgba(125,180,232,0.35)]" : "text-[#8E8E8E] hover:text-[#E8EEF5]"
+              className={`relative h-9 rounded-md px-2.5 text-[13px] font-medium transition-colors before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] sm:px-3 lg:h-8 ${focusRing} ${
+                on ? onTone : "text-[#8E8E8E] hover:text-[#E8EEF5]"
               }`}
             >
               {o.label}
@@ -67,7 +79,7 @@ function Sidebar({ pathname, onSignOut }) {
               key={to}
               to={to}
               aria-current={active ? "page" : undefined}
-              className={`relative flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-medium transition-colors ${focusRing} ${
+              className={`relative flex h-12 items-center gap-3 rounded-lg px-3 text-[16px] font-medium transition-colors lg:h-10 lg:text-[14px] ${focusRing} ${
                 active ? "bg-white/[0.06] text-white" : "text-[#B8BEC5] hover:bg-white/[0.03] hover:text-white"
               }`}
             >
@@ -83,7 +95,7 @@ function Sidebar({ pathname, onSignOut }) {
         <button
           type="button"
           onClick={onSignOut}
-          className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[14px] font-medium text-[#B8BEC5] transition-colors hover:bg-white/[0.03] hover:text-white ${focusRing}`}
+          className={`flex h-12 w-full items-center gap-3 rounded-lg px-3 text-[16px] font-medium text-[#B8BEC5] transition-colors hover:bg-white/[0.03] hover:text-white lg:h-10 lg:text-[14px] ${focusRing}`}
         >
           <LogOut className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />
           Sair
@@ -106,26 +118,36 @@ export default function Layout() {
     return () => document.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
+  useScrollLock(menuOpen);
+
   const onSignOut = async () => {
     await signOut("global");
     navigate("/login", { replace: true });
   };
 
+  const bar = barFor(pathname);
+  const sideInsets = "pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]";
+
   return (
-    <div className="min-h-screen bg-[#0A1930] text-[#F0F5FA] lg:flex">
+    <div className="min-h-screen overflow-x-clip bg-[#0A1930] text-[16px] text-[#F0F5FA] lg:flex">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-white/[0.06] bg-[#061224] lg:block">
         <Sidebar pathname={pathname} onSignOut={onSignOut} />
       </aside>
 
       {menuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu do painel">
-          <button type="button" aria-label="Fechar menu" onClick={() => setMenuOpen(false)} className="absolute inset-0 bg-[#061224]/70 backdrop-blur-sm" />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-white/[0.06] bg-[#061224] shadow-2xl">
+          <button
+            type="button"
+            aria-label="Fechar menu"
+            onClick={() => setMenuOpen(false)}
+            className="absolute inset-0 bg-[#061224]/70 backdrop-blur-sm duration-200 animate-in fade-in motion-reduce:animate-none"
+          />
+          <aside className="absolute inset-y-0 left-0 w-[19rem] max-w-[86vw] border-r border-white/[0.06] bg-[#061224] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)] shadow-2xl duration-200 animate-in slide-in-from-left motion-reduce:animate-none">
             <button
               type="button"
               aria-label="Fechar menu"
               onClick={() => setMenuOpen(false)}
-              className={`absolute right-3 top-5 flex h-9 w-9 items-center justify-center rounded-lg text-[#B8BEC5] hover:text-white ${focusRing}`}
+              className={`absolute right-2 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-lg text-[#B8BEC5] hover:text-white ${focusRing}`}
             >
               <X className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -135,22 +157,40 @@ export default function Layout() {
       )}
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0A1930]/90 px-4 backdrop-blur lg:justify-end lg:px-8">
-          <div className="flex items-center gap-2 lg:hidden">
+        <header className={`sticky top-0 z-30 border-b border-white/[0.06] bg-[#0A1930]/90 pt-[env(safe-area-inset-top)] backdrop-blur ${sideInsets} lg:px-8 lg:pt-0`}>
+          <div className="flex h-14 items-center justify-between gap-2 lg:justify-end">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 lg:hidden">
+              {bar.back ? (
+                <Link
+                  to={bar.back.to}
+                  aria-label={`Voltar para ${bar.back.label}`}
+                  className={`-ml-2 flex h-11 min-w-0 items-center gap-0.5 rounded-lg pr-2 text-[16px] font-medium text-[#7DB4E8] active:text-white ${focusRing}`}
+                >
+                  <ChevronLeft className="h-6 w-6 shrink-0" strokeWidth={2} aria-hidden="true" />
+                  {bar.back.label}
+                </Link>
+              ) : (
+                <>
+                  <Link to="/painel" aria-label="Radar, início" className={`flex h-8 shrink-0 items-center rounded-md bg-white px-1.5 ${focusRing}`}>
+                    <img src="/logo-ofc.png" alt="" className="h-6 w-6" />
+                  </Link>
+                  <p className="truncate font-display text-[19px] font-semibold tracking-tight text-white">{bar.title}</p>
+                </>
+              )}
+            </div>
+            <EnvSwitch />
             <button
               type="button"
               aria-label="Abrir menu"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen(true)}
-              className={`-ml-2 flex h-10 w-10 items-center justify-center rounded-lg text-[#B8BEC5] hover:text-white ${focusRing}`}
+              className={`-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#B8BEC5] hover:text-white lg:hidden ${focusRing}`}
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
-            <span className="font-display text-lg font-semibold tracking-tight">Radar</span>
           </div>
-          <EnvSwitch />
         </header>
-        <main className="px-4 py-6 lg:px-8 lg:py-8">
+        <main className={`${sideInsets} pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 lg:px-8 lg:py-8`}>
           <Outlet />
         </main>
       </div>

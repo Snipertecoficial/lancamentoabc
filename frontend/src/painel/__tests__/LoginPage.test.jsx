@@ -77,3 +77,12 @@ test("failed sign in -> shows the error, stays on the page", async () => {
   expect(container.querySelector('[role="alert"]').textContent).toBe("E-mail ou senha incorretos.");
   expect(mockNavigate).not.toHaveBeenCalled();
 });
+
+test("tab title is 'Radar — Painel' on /login, restored on the way out", async () => {
+  document.title = "Apartamentos à venda no ABC";
+  await mount();
+  expect(document.title).toBe("Radar — Painel");
+  await act(async () => { root.unmount(); });
+  expect(document.title).toBe("Apartamentos à venda no ABC");
+  root = createRoot(container); // afterEach unmounts again
+});
