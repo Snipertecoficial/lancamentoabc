@@ -164,12 +164,40 @@ describe("useAdminSession", () => {
     expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
-  test("USER_UPDATED with is_admin error -> denied + signOut (fail closed)", async () => {
-    await mountAdmin();
-    mockRpc.mockResolvedValue({ data: null, error: { message: "x" } });
-    await act(async () => { authListener("USER_UPDATED", { user: { email: "dono@x.com" } }); await tick(); });
-    expect(status()).toBe("denied");
-    expect(mockAuth.signOut).toHaveBeenCalled();
+  describe("re-check RPC error is transient: status kept, one retry after 3 s", () => {
+    const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
+    const advance = (ms) => act(async () => { jest.advanceTimersByTime(ms); await flush(); });
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    test("refresh + error -> stays admin, retries once; second error keeps admin, no further retry", async () => {
+      await mountAdmin();
+      mockRpc.mockResolvedValue({ data: null, error: { message: "network" } });
+      await act(async () => { authListener("TOKEN_REFRESHED", { user: { email: "dono@x.com" } }); });
+      await advance(0);
+      expect(mockRpc).toHaveBeenCalledTimes(1);
+      expect(status()).toBe("admin");
+      await advance(2999);
+      expect(mockRpc).toHaveBeenCalledTimes(1);
+      await advance(1);
+      expect(mockRpc).toHaveBeenCalledTimes(2);
+      expect(status()).toBe("admin");
+      await advance(60000);
+      expect(mockRpc).toHaveBeenCalledTimes(2);
+      expect(status()).toBe("admin");
+      expect(mockAuth.signOut).not.toHaveBeenCalled();
+    });
+
+    test("USER_UPDATED + error, retry answers false -> denied + signOut", async () => {
+      await mountAdmin();
+      mockRpc.mockResolvedValueOnce({ data: null, error: { message: "x" } }).mockResolvedValueOnce({ data: false, error: null });
+      await act(async () => { authListener("USER_UPDATED", { user: { email: "dono@x.com" } }); });
+      await advance(0);
+      expect(status()).toBe("admin");
+      await advance(3000);
+      expect(status()).toBe("denied");
+      expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: "local" });
+    });
   });
 
   test("SIGNED_IN as a different admin user (other tab) -> user updated", async () => {

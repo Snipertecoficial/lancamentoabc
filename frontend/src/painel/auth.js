@@ -50,6 +50,7 @@ export async function signIn(email, password) {
 
 // Events that carry a (possibly different or changed) session: the admin check is re-run for them.
 const RECHECK = ["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"];
+const RECHECK_RETRY_MS = 3000;
 
 // status: "loading" | "anon" | "denied" | "admin". A signed-in non-admin is signed out on the spot.
 export function useAdminSession() {
@@ -61,17 +62,38 @@ export function useAdminSession() {
     const timers = [];
     const set = (s) => { if (alive) setState(s); };
 
-    async function verify(session) {
-      if (!alive) return;
-      let admin = false;
-      try { admin = await checkAdmin(); } catch (e) { /* fail closed */ }
-      if (admin) {
-        denied = false;
-        return set({ status: "admin", user: session.user });
-      }
+    function allow(session) {
+      denied = false;
+      set({ status: "admin", user: session.user });
+    }
+    async function deny() {
       denied = true; // set before signOut so its SIGNED_OUT event does not turn this into "anon"
       set({ status: "denied", user: null });
       await signOut();
+    }
+
+    // First check on mount: fail closed (an error denies).
+    async function verify(session) {
+      let admin = false;
+      try { admin = await checkAdmin(); } catch (e) { /* fail closed */ }
+      if (admin) allow(session);
+      else await deny();
+    }
+
+    // Re-check on auth events: only an explicit false denies. An RPC error is treated as transient:
+    // the current status stays (RLS still guards the data) and the check is retried once.
+    async function recheck(session, retried) {
+      if (!alive) return;
+      let admin;
+      try {
+        admin = await checkAdmin();
+      } catch (e) {
+        if (!retried && alive) timers.push(setTimeout(() => { recheck(session, true); }, RECHECK_RETRY_MS));
+        return;
+      }
+      if (!alive) return;
+      if (admin) allow(session);
+      else await deny();
     }
 
     (async () => {
@@ -89,7 +111,7 @@ export function useAdminSession() {
         if (!denied) set({ status: "anon", user: null });
       } else if (session && RECHECK.includes(event)) {
         // Deferred: awaiting another supabase call inside this callback can deadlock supabase-js.
-        timers.push(setTimeout(() => { verify(session); }, 0));
+        timers.push(setTimeout(() => { recheck(session, false); }, 0));
       }
     });
     return () => {
