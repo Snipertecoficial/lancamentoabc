@@ -44,6 +44,22 @@ async function fetchDaily(view, columns, order, range) {
   return all;
 }
 
+// First day the Google Ads script ever sent costs: before it the panel has no data.
+async function fetchFirstDay() {
+  const { data, error } = await supabase.from("ads_campaign_daily").select("day").order("day", { ascending: true }).limit(1);
+  if (error) throw error;
+  return (data && data[0] && data[0].day) || null;
+}
+
+const br = (ymd) => ymd.split("-").reverse().join("/");
+const VALID_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// Exact days, so the owner can pick the same ones in Google Ads.
+function rangeText(f, range) {
+  const days = range.fromDay === range.toDay ? br(range.fromDay) : `${br(range.fromDay)} a ${br(range.toDay)}`;
+  return f.period === "custom" ? periodText(f, range) : `${periodText(f, range)} (${days})`;
+}
+
 async function fetchLastSync() {
   const { data, error } = await supabase.from("ads_sync_runs")
     .select("received_at,customer_id,currency,time_zone").order("id", { ascending: false }).limit(1);
@@ -210,15 +226,26 @@ function ListSkeleton({ what }) {
 export default function AnunciosPage() {
   const { env } = useEnv();
   const [f, setF] = useState(INITIAL);
+  // Custom dates are typed into a draft and only searched on "Aplicar".
+  const [draft, setDraft] = useState({ from: "", to: "" });
   const range = periodRange(f);
-  const setFilter = (key, value) => setF((p) => (p[key] === value ? p : { ...p, [key]: value }));
-  const choosePeriod = (period) => setF((p) => {
-    if (p.period === period) return p;
-    if (period !== "custom") return { ...p, period };
-    return { ...p, period, from: p.from || range.fromDay, to: p.to || range.toDay };
-  });
+  const choosePeriod = (period) => {
+    if (f.period === period) return;
+    if (period !== "custom") { setF((p) => ({ ...p, period })); return; }
+    const d = { from: f.from || range.fromDay, to: f.to || range.toDay };
+    setDraft(d);
+    setF((p) => ({ ...p, period, ...d }));
+  };
+  const draftValid = VALID_DAY.test(draft.from) && VALID_DAY.test(draft.to) && draft.from <= draft.to;
+  const draftChanged = draft.from !== f.from || draft.to !== f.to;
+  const apply = (e) => {
+    e.preventDefault();
+    if (draftValid && draftChanged) setF((p) => ({ ...p, from: draft.from, to: draft.to }));
+  };
 
   const syncQ = useQuery({ queryKey: ["ads_sync_runs"], queryFn: fetchLastSync, refetchInterval: 5 * 60 * 1000 });
+  const firstDayQ = useQuery({ queryKey: ["ads_first_day"], queryFn: fetchFirstDay });
+  const firstDay = firstDayQ.data || null;
   const campaignsQ = useQuery({
     queryKey: ["panel_ads_campaigns_daily", range.fromDay, range.toDay],
     queryFn: async () => aggregateAdsCampaigns(await fetchDaily("panel_ads_campaigns_daily", CAMPAIGN_COLUMNS, ["day", "campaign_id"], range)),
@@ -245,7 +272,7 @@ export default function AnunciosPage() {
         <div className="min-w-0">
           <h1 className="sr-only font-display text-[30px] font-semibold leading-tight tracking-tight text-white lg:not-sr-only lg:text-[34px]">Anúncios</h1>
           <p className="text-[14px] text-[#B8BEC5] lg:mt-1">
-            {`${periodText(f, range)}, Google Ads e leads de produção.`}
+            {`${rangeText(f, range)}, Google Ads e leads de produção.`}
             {env !== "production" && <span className="text-[#E9CF93]"> Esta tela sempre mostra produção.</span>}
           </p>
         </div>
@@ -257,13 +284,25 @@ export default function AnunciosPage() {
           <Segmented label="Período" options={PERIODS} value={f.period} onChange={choosePeriod} />
         </div>
         {f.period === "custom" && (
-          <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:flex md:w-auto">
-            <input type="date" aria-label="De" value={f.from} max={f.to || todaySP()} onChange={(e) => setFilter("from", e.target.value)} className={`${control} w-full min-w-0 md:w-auto`} />
+          <form onSubmit={apply} aria-label="Datas do período" className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:flex md:w-auto">
+            <input type="date" aria-label="De" value={draft.from} max={draft.to || todaySP()} onChange={(e) => setDraft((d) => ({ ...d, from: e.target.value }))} className={`${control} w-full min-w-0 md:w-auto`} />
             <span aria-hidden="true" className="text-[14px] text-[#8E8E8E] md:text-[13px]">até</span>
-            <input type="date" aria-label="Até" value={f.to} min={f.from || undefined} max={todaySP()} onChange={(e) => setFilter("to", e.target.value)} className={`${control} w-full min-w-0 md:w-auto`} />
-          </div>
+            <input type="date" aria-label="Até" value={draft.to} min={draft.from || undefined} max={todaySP()} onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))} className={`${control} w-full min-w-0 md:w-auto`} />
+            <button
+              type="submit"
+              disabled={!draftValid || !draftChanged}
+              className={`col-span-3 h-11 rounded-lg bg-[#7DB4E8] px-4 text-[15px] font-semibold text-[#061224] transition-colors hover:bg-[#9CC7EF] disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-[#8E8E8E] md:h-9 md:text-[13px] ${focusRing}`}
+            >
+              Aplicar
+            </button>
+          </form>
         )}
       </div>
+      {connected && firstDay && range.fromDay < firstDay && (
+        <p role="status" className="mt-3 text-[13px] text-[#E9CF93]">
+          {`O Google Ads enviou custos a partir de ${br(firstDay)}. Antes desse dia o painel não tem dados, então o total pode ficar abaixo do que o Google mostra.`}
+        </p>
+      )}
 
       {!syncQ.isPending && !syncQ.isError && !connected ? (
         <Panel label="Conectar o Google Ads" title="Conectar o Google Ads" className="mt-4 md:mt-5"><NotConnected /></Panel>
@@ -334,6 +373,7 @@ export default function AnunciosPage() {
 
           <p className="mt-4 text-[12px] leading-relaxed text-[#8E8E8E]">
             Leads do Radar são ligados à campanha pelo clique do anúncio (gclid). Sem ele, pelo código da campanha no link ou pelo nome da campanha.
+            {" "}Para comparar com o Google Ads, escolha lá as mesmas datas: o “Últimos 30 dias” do Google não inclui hoje, o daqui inclui. Os custos de hoje chegam com algumas horas de atraso.
           </p>
         </>
       )}

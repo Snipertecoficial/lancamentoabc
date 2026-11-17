@@ -35,9 +35,10 @@ const has = (q, ...call) => q.calls.some((c) => JSON.stringify(c) === JSON.strin
 const last = (table) => mockQueries.filter((q) => q.table === table).slice(-1)[0];
 const text = () => container.textContent.replace(/ /g, " ");
 
-let syncRows, campaignRows, keywordRows, campaignError;
+let syncRows, campaignRows, keywordRows, campaignError, firstDayRows;
 function defaultRespond(q) {
   if (q.table === "ads_sync_runs") return { data: syncRows, error: null };
+  if (q.table === "ads_campaign_daily") return { data: firstDayRows, error: null };
   if (q.table === "panel_ads_campaigns_daily") return campaignError ? { data: null, error: campaignError } : { data: campaignRows, error: null };
   if (q.table === "panel_ads_keywords_daily") return { data: keywordRows, error: null };
   return { data: [], error: null };
@@ -76,6 +77,7 @@ beforeEach(() => {
     { day: r30.toDay, campaign_id: "111", campaign_name: "SBC Pesquisa", ad_group_id: "901", criterion_id: "7001", keyword_text: "apartamento sbc", match_type: "PHRASE", impressions: 600, clicks: 30, cost: "60", google_conversions: "1", leads: 3 },
     { day: r30.toDay, campaign_id: "111", campaign_name: "SBC Pesquisa", ad_group_id: null, criterion_id: null, keyword_text: null, match_type: null, impressions: 0, clicks: 0, cost: "0", google_conversions: "0", leads: 1 },
   ];
+  firstDayRows = [];
   mockRespond = defaultRespond;
 });
 afterEach(() => {
@@ -155,4 +157,62 @@ test("em dados de teste avisa que a tela mostra producao", async () => {
   sessionStorage.setItem("radar-painel-env", "staging");
   await mount();
   expect(text()).toContain("Esta tela sempre mostra produção.");
+});
+
+const br = (ymd) => ymd.split("-").reverse().join("/");
+function typeDate(label, value) {
+  const input = container.querySelector(`input[aria-label="${label}"]`);
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+  act(() => {
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+const button = (label) => [...container.querySelectorAll("button")].find((b) => b.textContent.trim() === label);
+
+test("datas personalizadas so buscam ao clicar em Aplicar", async () => {
+  await mount();
+  await act(async () => { container.querySelector('[role="radio"][aria-checked="false"]:last-child').click(); });
+  await flush();
+  expect(button("Aplicar").disabled).toBe(true);
+
+  typeDate("De", "2026-10-01");
+  typeDate("Até", "2026-10-10");
+  await flush();
+  expect(has(last("panel_ads_campaigns_daily"), "gte", "day", "2026-10-01")).toBe(false);
+
+  expect(button("Aplicar").disabled).toBe(false);
+  await act(async () => { button("Aplicar").click(); });
+  await flush();
+  const c = last("panel_ads_campaigns_daily");
+  expect(has(c, "gte", "day", "2026-10-01")).toBe(true);
+  expect(has(c, "lte", "day", "2026-10-10")).toBe(true);
+  expect(button("Aplicar").disabled).toBe(true);
+});
+
+test("Aplicar fica desligado com data inicial depois da final", async () => {
+  await mount();
+  await act(async () => { container.querySelector('[role="radio"][aria-checked="false"]:last-child').click(); });
+  await flush();
+  typeDate("De", "2026-10-20");
+  typeDate("Até", "2026-10-10");
+  expect(button("Aplicar").disabled).toBe(true);
+});
+
+test("mostra as datas exatas do periodo para comparar com o Google", async () => {
+  await mount();
+  expect(text()).toContain(`Últimos 30 dias (${br(r30.fromDay)} a ${br(r30.toDay)})`);
+  expect(text()).toContain("não inclui hoje");
+});
+
+test("avisa quando o periodo comeca antes dos dados enviados pelo Google Ads", async () => {
+  firstDayRows = [{ day: r30.toDay }];
+  await mount();
+  expect(text()).toContain(`O Google Ads enviou custos a partir de ${br(r30.toDay)}`);
+});
+
+test("sem aviso de historico quando o periodo esta coberto", async () => {
+  firstDayRows = [{ day: r30.fromDay }];
+  await mount();
+  expect(text()).not.toContain("O Google Ads enviou custos a partir de");
 });

@@ -50,13 +50,13 @@ Deno.test("sem chave configurada o script para com mensagem clara e nao envia na
   assertEquals(posts.length, 0);
 });
 
-Deno.test("envia custos de 30 dias e cliques de 30 dias, com a chave no cabecalho", () => {
+Deno.test("envia custos de 90 dias e cliques de 30 dias, com a chave no cabecalho", () => {
   const { api, queries, posts, logs } = load(rowsFor);
   api.RADAR.SECRET = "chave-de-teste-1234567890";
   api.main();
 
-  assert(queries[0].includes("FROM campaign WHERE segments.date BETWEEN '2026-10-19' AND '2026-11-17'"));
-  assert(queries[1].includes("FROM keyword_view WHERE segments.date BETWEEN '2026-10-19' AND '2026-11-17'"));
+  assert(queries[0].includes("FROM campaign WHERE segments.date BETWEEN '2026-08-20' AND '2026-11-17'"));
+  assert(queries[1].includes("FROM keyword_view WHERE segments.date BETWEEN '2026-08-20' AND '2026-11-17'"));
   const clickDays = queries.filter((q) => q.includes("FROM click_view")).map((q) => /'(\d{4}-\d{2}-\d{2})'/.exec(q)![1]);
   assertEquals(clickDays.length, 30);
   assertEquals([clickDays[0], clickDays[1], clickDays[29]], ["2026-11-17", "2026-11-16", "2026-10-19"]);
@@ -67,7 +67,7 @@ Deno.test("envia custos de 30 dias e cliques de 30 dias, com a chave no cabecalh
   const first = JSON.parse(posts[0].opts.payload);
   assertEquals(first.customer_id, "1234567890");
   assertEquals(first.currency, "BRL");
-  assertEquals(first.stats.date_from, "2026-10-19");
+  assertEquals(first.stats.date_from, "2026-08-20");
   assertEquals(first.stats.campaigns, [{ day: "2026-11-16", campaign_id: "111", campaign_name: "SBC Pesquisa", channel: "SEARCH", impressions: "800", clicks: "40", cost_micros: "80500000", conversions: 1 }]);
   assertEquals(first.stats.keywords[0].criterion_id, "7001");
   assertEquals(first.stats.keywords[0].clicks, 0);
