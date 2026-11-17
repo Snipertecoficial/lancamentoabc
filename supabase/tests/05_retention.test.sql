@@ -9,10 +9,11 @@ declare
   res jsonb;
   l_id uuid := gen_random_uuid();
   v_old uuid := gen_random_uuid();      -- anonymous, old
-  v_lead uuid := gen_random_uuid();     -- old, linked to lead via lead_id
+  v_lead uuid := gen_random_uuid();     -- old, linked to lead via lead_id only (no session)
   v_lv uuid := gen_random_uuid();       -- old, only in lead_visitors
   v_sess uuid := gen_random_uuid();     -- old, referenced by a recent session
   v_gone uuid := gen_random_uuid();     -- old anonymous, unreferenced
+  v_fv uuid := gen_random_uuid();       -- old anonymous, only referenced by leads.first_visitor_id
   v_new uuid := gen_random_uuid();      -- recent
   s_old_ev uuid := gen_random_uuid();   -- old session with old + recent event
   s_old_empty uuid := gen_random_uuid();-- old session, no events
@@ -23,7 +24,7 @@ declare
   tok uuid := gen_random_uuid();
 begin
   begin
-    out := out || extensions.plan(17);
+    out := out || extensions.plan(18);
 
     insert into public.leads(id, env, phone_e164, first_session_id)
       values (l_id, 'staging', '+5511999990005', null);
@@ -32,15 +33,16 @@ begin
       (v_lead, 'staging', now() - interval '15 months', now() - interval '14 months', l_id),
       (v_lv,   'staging', now() - interval '15 months', now() - interval '14 months', null),
       (v_sess, 'staging', now() - interval '15 months', now() - interval '14 months', null),
+      (v_fv,   'staging', now() - interval '15 months', now() - interval '14 months', null),
       (v_gone, 'staging', now() - interval '15 months', now() - interval '14 months', null),
       (v_new,  'staging', now() - interval '1 day',     now() - interval '1 day',     null);
     insert into public.lead_visitors(lead_id, visitor_id) values (l_id, v_lv);
     insert into public.sessions(id, visitor_id, env, started_at, last_event_at) values
       (s_old_ev,    v_old, 'staging', now() - interval '14 months', now() - interval '14 months'),
       (s_old_empty, v_old, 'staging', now() - interval '14 months', now() - interval '14 months'),
-      (s_first,     v_lead,'staging', now() - interval '14 months', now() - interval '14 months'),
+      (s_first,     null,  'staging', now() - interval '14 months', now() - interval '14 months'),
       (s_new,       v_sess,'staging', now() - interval '1 day',     now() - interval '1 day');
-    update public.leads set first_session_id = s_first where id = l_id;
+    update public.leads set first_session_id = s_first, first_visitor_id = v_fv where id = l_id;
     insert into public.events(id, session_id, type, occurred_at) values
       (e_old, s_old_ev, 'page_view', now() - interval '14 months'),
       (e_new, s_old_ev, 'page_view', now() - interval '1 day');
@@ -70,6 +72,7 @@ begin
     -- visitors
     out := out || extensions.is((select count(*) from public.visitors where id = v_gone)::int, 0, 'visitor anônimo antigo sem referências apagado');
     out := out || extensions.is((select count(*) from public.visitors where id = v_new)::int, 1, 'visitor recente mantido');
+    out := out || extensions.is((select count(*) from public.visitors where id = v_fv)::int, 1, 'visitor antigo referenciado só por leads.first_visitor_id mantido');
     out := out || extensions.is(
       (select count(*) from public.visitors where id in (v_lead, v_lv, v_old))::int, 3,
       'visitors com lead / em lead_visitors / ainda referenciados por sessão mantidos');
