@@ -1,14 +1,18 @@
 // Receives Google Ads cost data from the Google Ads script (server to server, no browser, no CORS).
 // Auth: header x-radar-secret must equal RADAR_ADS_SECRET. The payload is validated and rebuilt
 // with known keys only, then handed to ads_ingest (costs/clicks), ads_state_ingest (state/insights),
-// ads_commands_report (results of applied edits) and ads_commands_claim (pull: edits to apply).
+// ads_commands_report (results of applied edits), ads_commands_claim (pull: edits to apply) and
+// ads_reports_ingest (raw reports for analysis).
 import { sha256Hex } from "../_shared/hash.ts";
 
 export const MAX_BODY = 8_000_000;
 export const LIMITS = {
   campaigns: 20_000, keywords: 50_000, clicks: 5_000,
   state_campaigns: 2_000, state_keywords: 20_000, search_terms: 20_000, networks: 5_000, results: 200,
+  reports: 10, report_rows: 20_000, report_keys: 20,
 } as const;
+// Raw reports kept as JSON for analysis (ads_reports). Values must be flat scalars.
+export const REPORTS = ["locations_city", "locations_detail", "location_targets", "conversion_actions", "conversions_by_action"] as const;
 
 export type CampaignRow = {
   day: string; campaign_id: string; campaign_name: string | null; channel: string | null;
@@ -39,6 +43,10 @@ export type SearchTermRow = {
 export type NetworkRow = {
   campaign_id: string; network: string; impressions: number; clicks: number; cost_micros: number; conversions: number;
 };
+export type Report = {
+  report: string; date_from: string | null; date_to: string | null;
+  rows: Record<string, string | number | boolean | null>[]; error: string | null;
+};
 // Outcome of a command the script was handed (ads_commands_claim).
 export type CommandResult = { id: number; ok: boolean; error: string | null };
 
@@ -52,6 +60,7 @@ export type AdsPayload = {
   insights?: { date_from: string; date_to: string; search_terms?: SearchTermRow[]; networks?: NetworkRow[] };
   results?: CommandResult[];
   pull?: boolean;
+  reports?: Report[];
 };
 
 export type AdsSyncDeps = {
@@ -60,6 +69,7 @@ export type AdsSyncDeps = {
   ingestState(p: AdsPayload): Promise<Record<string, number>>;
   report(customerId: string, results: CommandResult[]): Promise<number>;
   claim(customerId: string): Promise<unknown[]>;
+  ingestReports(customerId: string, reports: Report[]): Promise<number>;
 };
 
 class Invalid extends Error {}
@@ -253,6 +263,36 @@ export function parsePayload(raw: unknown): AdsPayload {
     });
   }
 
+  if (b.reports !== undefined && b.reports !== null) {
+    out.reports = list(b.reports, LIMITS.reports, "reports").map((r, i) => {
+      const at = `reports[${i}]`;
+      const o = obj(r, at);
+      if (typeof o.report !== "string" || !(REPORTS as readonly string[]).includes(o.report)) throw new Invalid(`${at}.report`);
+      const optDay = (v: unknown, where: string) => (v === null || v === undefined ? null : day(v, where));
+      return {
+        report: o.report,
+        date_from: optDay(o.date_from, `${at}.date_from`),
+        date_to: optDay(o.date_to, `${at}.date_to`),
+        error: text(o.error, 500, `${at}.error`),
+        rows: list(o.rows, LIMITS.report_rows, `${at}.rows`).map((row, j) => {
+          const rat = `${at}.rows[${j}]`;
+          const ro = obj(row, rat);
+          const keys = Object.keys(ro);
+          if (keys.length > LIMITS.report_keys) throw new Invalid(rat);
+          const clean: Record<string, string | number | boolean | null> = {};
+          for (const k of keys) {
+            const v = ro[k];
+            if (!/^[a-z_]{1,40}$/.test(k)) throw new Invalid(`${rat}.${k}`);
+            if (v === null || typeof v === "boolean" || (typeof v === "number" && Number.isFinite(v))) clean[k] = v as never;
+            else if (typeof v === "string") clean[k] = v.slice(0, 500);
+            else throw new Invalid(`${rat}.${k}`);
+          }
+          return clean;
+        }),
+      };
+    });
+  }
+
   if (b.pull !== undefined && b.pull !== null) {
     if (typeof b.pull !== "boolean") throw new Invalid("pull");
     if (b.pull) out.pull = true;
@@ -315,6 +355,7 @@ export async function handleAdsSync(req: Request, deps: AdsSyncDeps): Promise<Re
     // Only cost/click syncs count as a sync run (the panel's "atualizado há").
     if (payload.stats || payload.clicks) Object.assign(out, await deps.ingest(payload));
     if (payload.state || payload.insights) Object.assign(out, await deps.ingestState(payload));
+    if (payload.reports?.length) out.reports = await deps.ingestReports(payload.customer_id, payload.reports);
     if (payload.pull) out.commands = await deps.claim(payload.customer_id);
     return json(200, out);
   } catch (err) {

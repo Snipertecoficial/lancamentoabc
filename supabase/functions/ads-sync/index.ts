@@ -18,5 +18,6 @@ Deno.serve((req) =>
     ingestState: (p) => rpc<Record<string, number>>("ads_state_ingest", { p }),
     report: (cust, results) => rpc<number>("ads_commands_report", { cust, results }),
     claim: (cust) => rpc<unknown[]>("ads_commands_claim", { cust }),
+    ingestReports: (cust, reports) => rpc<number>("ads_reports_ingest", { cust, reports }),
   })
 );

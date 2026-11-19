@@ -31,6 +31,11 @@ function mk(opts: { body?: string; secret?: string | undefined; header?: string 
       calls.push(`report:${cust}:${JSON.stringify(results)}`);
       return Promise.resolve(results.length);
     },
+    ingestReports: (cust: string, reports: unknown[]) => {
+      calls.push(`reports:${cust}:${reports.length}`);
+      got.push({ reports } as unknown as AdsPayload);
+      return Promise.resolve(reports.length);
+    },
     claim: (cust: string) => {
       calls.push(`claim:${cust}`);
       return Promise.resolve([{ id: 7, kind: "campaign_status", campaign_id: "111", value: { status: "PAUSED" } }]);
@@ -190,5 +195,33 @@ Deno.test("estado, insights e resultados invalidos -> 400 dizendo onde", async (
     assertEquals(r.status, 400, at);
     assertEquals(await r.json(), { ok: false, error: "invalid_payload", at });
     assertEquals(calls, []);
+  }
+});
+
+Deno.test("relatorios vao para ingestReports com valores planos; nome desconhecido ou objeto aninhado -> 400", async () => {
+  const reports = [
+    { report: "locations_city", date_from: "2026-08-22", date_to: "2026-11-19", rows: [{ campaign_id: "111", location: "geoTargetConstants/1001773", location_name: "Sao Bernardo do Campo", targeted: true, clicks: "40", cost_micros: "9000000", conversions: 1.5 }] },
+    { report: "conversion_actions", rows: [], error: "query falhou" },
+  ];
+  const { got, calls, res } = mk({ body: JSON.stringify({ customer_id: "1234567890", reports }) });
+  const r = await res;
+  assertEquals(r.status, 200);
+  assertEquals(await r.json(), { ok: true, reports: 2 });
+  assertEquals(calls, ["reports:1234567890:2"]);
+  const sent = (got[0] as unknown as { reports: { rows: unknown[]; error: string | null; date_from: string | null }[] }).reports;
+  assertEquals(sent[0].rows[0], reports[0].rows[0]);
+  assertEquals(sent[1].error, "query falhou");
+  assertEquals(sent[1].date_from, null);
+
+  const bad: [unknown, string][] = [
+    [[{ report: "outra", rows: [] }], "reports[0].report"],
+    [[{ report: "locations_city", rows: [{ a: { b: 1 } }] }], "reports[0].rows[0].a"],
+    [[{ report: "locations_city", rows: [{ "Bad-Key": 1 }] }], "reports[0].rows[0].Bad-Key"],
+  ];
+  for (const [rs, at] of bad) {
+    const t = mk({ body: JSON.stringify({ customer_id: "1234567890", reports: rs }) });
+    const rr = await t.res;
+    assertEquals(rr.status, 400, at);
+    assertEquals(await rr.json(), { ok: false, error: "invalid_payload", at });
   }
 });

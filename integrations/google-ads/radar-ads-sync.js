@@ -1,5 +1,5 @@
 /**
- * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 2.
+ * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 2.1.
  *
  * Como instalar (uma vez):
  *   1. Google Ads → Ferramentas → Ações em massa → Scripts → abra o script "Radar" (ou "+" para um novo).
@@ -17,6 +17,9 @@
  *     dos últimos 30 dias, para ligar cada lead à campanha exata;
  *   - envia a situação atual das campanhas (ativa/pausada, orçamento) e das palavras-chave, os termos de
  *     pesquisa e o custo por rede (Pesquisa, YouTube, Display...) dos últimos 30 dias;
+ *   - envia relatórios para análise: de onde as pessoas viram os anúncios (cidade e bairro), como cada
+ *     campanha está segmentada (raio, cidades, presença/interesse, redes) e quais conversões existem
+ *     e quais geraram as conversões (últimos 90 dias);
  *   - depois fica uns 25 minutos olhando a fila do painel a cada minuto, para aplicar alterações rápido.
  * Nenhum dado pessoal sai do Google Ads.
  */
@@ -56,6 +59,7 @@ function main() {
 
   radarSendState_(ctx);
   radarSendInsights_(ctx);
+  radarSendReports_(ctx);
 
   var clicks = [];
   for (var i = 0; i < RADAR.CLICK_DAYS; i++) {
@@ -239,6 +243,180 @@ function radarSendInsights_(ctx) {
   } catch (e) {
     Logger.log('Radar: termos de pesquisa/redes não foram enviados desta vez (' + e + ').');
   }
+}
+
+// Reports for analysis (last COST_DAYS days): where people physically were (city and the most specific
+// place), how each campaign is targeted, which conversion actions exist and which produced conversions.
+// Each report fails alone (its error is sent instead); a failure here never stops the cost sync.
+function radarSendReports_(ctx) {
+  try {
+    var from = radarAddDays_(ctx.today, -(RADAR.COST_DAYS - 1));
+    var range = 'segments.date BETWEEN \'' + from + '\' AND \'' + ctx.today + '\'';
+    var reports = [];
+    var add = function (name, dated, build) {
+      var r = { report: name, date_from: dated ? from : null, date_to: dated ? ctx.today : null, rows: [] };
+      try {
+        r.rows = build();
+      } catch (e) {
+        r.error = String(e && e.message ? e.message : e).slice(0, 500);
+      }
+      reports.push(r);
+    };
+    add('locations_city', true, function () { return radarLocations_(range, 'segments.geo_target_city', 'segments.geoTargetCity'); });
+    add('locations_detail', true, function () {
+      return radarLocations_(range, 'segments.geo_target_most_specific_location', 'segments.geoTargetMostSpecificLocation');
+    });
+    add('location_targets', false, radarLocationTargets_);
+    add('conversion_actions', false, radarConversionActions_);
+    add('conversions_by_action', true, function () { return radarConversionsByAction_(range); });
+    try {
+      radarNameLocations_(reports);
+    } catch (e) {
+      Logger.log('Radar: nomes dos locais não foram encontrados (' + e + ').');
+    }
+    radarPost_(radarWith_(ctx.base, { reports: reports }));
+    var summary = reports.map(function (r) { return r.report + ' ' + (r.error ? 'erro' : r.rows.length); }).join(', ');
+    Logger.log('Radar: relatórios enviados (' + summary + ').');
+  } catch (e) {
+    Logger.log('Radar: relatórios de localização/conversões não foram enviados desta vez (' + e + ').');
+  }
+}
+
+function radarMetrics_(r, row) {
+  row.impressions = radarGet_(r, 'metrics.impressions') || 0;
+  row.clicks = radarGet_(r, 'metrics.clicks') || 0;
+  row.cost_micros = radarGet_(r, 'metrics.costMicros') || 0;
+  row.conversions = radarGet_(r, 'metrics.conversions') || 0;
+  return row;
+}
+
+function radarLocations_(range, field, path) {
+  return radarRows_(
+    'SELECT campaign.id, user_location_view.targeting_location, ' + field + ', ' +
+    'metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions ' +
+    'FROM user_location_view WHERE ' + range + ' AND metrics.impressions > 0',
+    function (r) {
+      return radarMetrics_(r, {
+        campaign_id: String(radarGet_(r, 'campaign.id')),
+        location: radarGet_(r, path),
+        targeted: radarGet_(r, 'userLocationView.targetingLocation') === true
+      });
+    });
+}
+
+function radarLocationTargets_() {
+  var rows = radarRows_(
+    'SELECT campaign.id, campaign_criterion.type, campaign_criterion.negative, campaign_criterion.location.geo_target_constant, ' +
+    'campaign_criterion.proximity.radius, campaign_criterion.proximity.radius_units, campaign_criterion.proximity.address.city_name, ' +
+    'campaign_criterion.proximity.address.street_address, campaign_criterion.proximity.geo_point.latitude_in_micro_degrees, ' +
+    'campaign_criterion.proximity.geo_point.longitude_in_micro_degrees FROM campaign_criterion ' +
+    'WHERE campaign_criterion.type IN (\'LOCATION\', \'PROXIMITY\') AND campaign.status != \'REMOVED\'',
+    function (r) {
+      return {
+        kind: 'criterion',
+        campaign_id: String(radarGet_(r, 'campaign.id')),
+        type: radarGet_(r, 'campaignCriterion.type'),
+        negative: radarGet_(r, 'campaignCriterion.negative') === true,
+        location: radarGet_(r, 'campaignCriterion.location.geoTargetConstant'),
+        radius: radarGet_(r, 'campaignCriterion.proximity.radius'),
+        radius_units: radarGet_(r, 'campaignCriterion.proximity.radiusUnits'),
+        city: radarGet_(r, 'campaignCriterion.proximity.address.cityName'),
+        street: radarGet_(r, 'campaignCriterion.proximity.address.streetAddress'),
+        lat_micro: radarGet_(r, 'campaignCriterion.proximity.geoPoint.latitudeInMicroDegrees'),
+        lng_micro: radarGet_(r, 'campaignCriterion.proximity.geoPoint.longitudeInMicroDegrees')
+      };
+    });
+  try {
+    rows = rows.concat(radarRows_(
+      'SELECT campaign.id, campaign.geo_target_type_setting.positive_geo_target_type, ' +
+      'campaign.network_settings.target_search_network, campaign.network_settings.target_partner_search_network, ' +
+      'campaign.network_settings.target_content_network, campaign.url_expansion_opt_out ' +
+      'FROM campaign WHERE campaign.status != \'REMOVED\'',
+      function (r) {
+        return {
+          kind: 'settings',
+          campaign_id: String(radarGet_(r, 'campaign.id')),
+          geo_target_type: radarGet_(r, 'campaign.geoTargetTypeSetting.positiveGeoTargetType'),
+          search_network: radarGet_(r, 'campaign.networkSettings.targetSearchNetwork'),
+          partner_network: radarGet_(r, 'campaign.networkSettings.targetPartnerSearchNetwork'),
+          content_network: radarGet_(r, 'campaign.networkSettings.targetContentNetwork'),
+          url_expansion_opt_out: radarGet_(r, 'campaign.urlExpansionOptOut')
+        };
+      }));
+  } catch (e) {
+    rows.push({ kind: 'settings_error', error: String(e && e.message ? e.message : e).slice(0, 400) });
+  }
+  return rows;
+}
+
+function radarConversionActions_() {
+  return radarRows_(
+    'SELECT conversion_action.id, conversion_action.name, conversion_action.status, conversion_action.type, ' +
+    'conversion_action.category, conversion_action.primary_for_goal, conversion_action.counting_type, ' +
+    'conversion_action.include_in_conversions_metric FROM conversion_action WHERE conversion_action.status != \'REMOVED\'',
+    function (r) {
+      return {
+        conversion_action_id: String(radarGet_(r, 'conversionAction.id')),
+        name: radarGet_(r, 'conversionAction.name'),
+        status: radarGet_(r, 'conversionAction.status'),
+        type: radarGet_(r, 'conversionAction.type'),
+        category: radarGet_(r, 'conversionAction.category'),
+        primary_for_goal: radarGet_(r, 'conversionAction.primaryForGoal') === true,
+        counting_type: radarGet_(r, 'conversionAction.countingType'),
+        in_conversions: radarGet_(r, 'conversionAction.includeInConversionsMetric') === true
+      };
+    });
+}
+
+function radarConversionsByAction_(range) {
+  return radarRows_(
+    'SELECT segments.date, campaign.id, segments.conversion_action, segments.conversion_action_name, ' +
+    'metrics.conversions, metrics.all_conversions FROM campaign WHERE ' + range + ' AND metrics.all_conversions > 0',
+    function (r) {
+      return {
+        day: radarGet_(r, 'segments.date'),
+        campaign_id: String(radarGet_(r, 'campaign.id')),
+        conversion_action: radarGet_(r, 'segments.conversionAction'),
+        conversion_action_name: radarGet_(r, 'segments.conversionActionName'),
+        conversions: radarGet_(r, 'metrics.conversions') || 0,
+        all_conversions: radarGet_(r, 'metrics.allConversions') || 0
+      };
+    });
+}
+
+// Adds location_name / location_canonical / location_type to every row that has a geoTargetConstants/ id.
+function radarNameLocations_(reports) {
+  var ids = {};
+  reports.forEach(function (rep) {
+    rep.rows.forEach(function (row) {
+      if (typeof row.location === 'string' && row.location.indexOf('geoTargetConstants/') === 0) ids[row.location] = true;
+    });
+  });
+  var list = Object.keys(ids);
+  var names = {};
+  for (var i = 0; i < list.length; i += 200) {
+    var chunk = list.slice(i, i + 200).map(function (id) { return '\'' + id + '\''; }).join(', ');
+    radarRows_(
+      'SELECT geo_target_constant.resource_name, geo_target_constant.name, geo_target_constant.canonical_name, ' +
+      'geo_target_constant.target_type FROM geo_target_constant WHERE geo_target_constant.resource_name IN (' + chunk + ')',
+      function (r) {
+        names[radarGet_(r, 'geoTargetConstant.resourceName')] = {
+          name: radarGet_(r, 'geoTargetConstant.name'),
+          canonical: radarGet_(r, 'geoTargetConstant.canonicalName'),
+          type: radarGet_(r, 'geoTargetConstant.targetType')
+        };
+        return null;
+      });
+  }
+  reports.forEach(function (rep) {
+    rep.rows.forEach(function (row) {
+      var n = names[row.location];
+      if (!n) return;
+      row.location_name = n.name;
+      row.location_canonical = n.canonical;
+      row.location_type = n.type;
+    });
+  });
 }
 
 /* ---------- custos e cliques ---------- */
