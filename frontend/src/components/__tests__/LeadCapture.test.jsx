@@ -399,6 +399,21 @@ describe("modal submit", () => {
     expect(sessionStorage.getItem("radar_pending_lead")).toBeNull();
   });
 
+  test("GTM: 'Seguir para o atendimento' with the phone missing fires no native submit", async () => {
+    const seen = [];
+    const cap = (e) => seen.push(e.target.id);
+    document.addEventListener("submit", cap, true);
+    try {
+      await act(async () => { type(input("name"), "Ana Souza"); });
+      await clickSubmit(2);
+    } finally {
+      document.removeEventListener("submit", cap, true);
+    }
+    expect(seen).toEqual([]);
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockTrack).toHaveBeenCalledWith("form_submit_attempt", { form_id: "conversion-form-espontone-modal", invalid: ["phone"] });
+  });
+
   test("GTM: document listeners see the native submit of #conversion-form-espontone-modal", async () => {
     const seen = [];
     const cap = (e) => seen.push(["capture", e.target.id, e.defaultPrevented]);

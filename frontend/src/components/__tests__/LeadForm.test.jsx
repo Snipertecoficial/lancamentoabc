@@ -9,8 +9,10 @@ const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({ useNavigate: () => mockNavigate }), { virtual: true });
 
 let mockEnabled = true;
+const mockTrack = jest.fn();
 jest.mock("@/lib/radar", () => ({
   isRadarEnabled: () => mockEnabled,
+  track: (...a) => mockTrack(...a),
   sessionMeta: () => ({ landing_url: "http://localhost/" }), // used by the real submitLead (timeout test)
 }));
 
@@ -61,6 +63,7 @@ beforeEach(async () => {
   window.dataLayer = [];
   mockEnabled = true;
   mockNavigate.mockReset();
+  mockTrack.mockReset();
   mockSubmitLead.mockReset();
   mockSubmitLead.mockResolvedValue({ ok: true, token: "tok-1" });
   consoleErr = jest.spyOn(console, "error").mockImplementation(() => {});
@@ -239,6 +242,52 @@ test("GTM: document capture and bubble listeners see the submit of #conversion-f
 test("submit attempt signal is pushed even when validation fails", async () => {
   await clickSubmit();
   expect(window.dataLayer.filter((e) => e.event === "lead_form_submit_attempt")).toHaveLength(1);
+});
+
+// GTM's legacy "form submission" trigger is the Google Ads conversion: a tap with missing data
+// must never produce a native submit event, or Google counts a conversion with no lead.
+describe("invalid attempt never reaches the native submit (GTM form trigger)", () => {
+  const listen = () => {
+    const seen = [];
+    const cap = (e) => seen.push(e.target.id);
+    document.addEventListener("submit", cap, true);
+    return { seen, stop: () => document.removeEventListener("submit", cap, true) };
+  };
+
+  test("empty form: no submit event, errors shown, attempt still recorded for GTM and Radar", async () => {
+    const l = listen();
+    try { await clickSubmit(); } finally { l.stop(); }
+    expect(l.seen).toEqual([]);
+    expect(mockSubmitLead).not.toHaveBeenCalled();
+    expect(input("name").getAttribute("aria-invalid")).toBe("true");
+    expect(input("phone").getAttribute("aria-invalid")).toBe("true");
+    expect(document.activeElement).toBe(input("name"));
+    expect(window.dataLayer.filter((e) => e.event === "lead_form_submit_attempt")).toHaveLength(1);
+    expect(mockTrack).toHaveBeenCalledWith("form_submit_attempt", { form_id: "conversion-form-espontone", invalid: ["name", "phone"] });
+  });
+
+  test("only the name filled (the 19/11 case): no submit event", async () => {
+    const l = listen();
+    try {
+      await act(async () => { type(input("name"), "Ana Souza"); });
+      await clickSubmit(2);
+    } finally { l.stop(); }
+    expect(l.seen).toEqual([]);
+    expect(document.activeElement).toBe(input("phone"));
+  });
+
+  test("fixed after the errors -> the native submit happens once and the lead is sent", async () => {
+    mockSubmitLead.mockResolvedValue({ ok: true, token: "tok-1" });
+    const l = listen();
+    try {
+      await clickSubmit();
+      await fillValid();
+      await clickSubmit();
+      await flush();
+    } finally { l.stop(); }
+    expect(l.seen).toEqual(["conversion-form-espontone"]);
+    expect(mockSubmitLead).toHaveBeenCalledTimes(1);
+  });
 });
 
 test("radar disabled -> no submitLead; opens WhatsApp prefilled with the lead (no lead lost)", async () => {

@@ -144,8 +144,11 @@ export function labelFor(event) {
       const f = FIELD_LABELS[str(p.last_field)];
       return f ? `Saiu sem enviar o formulário (parou no campo ${f})` : "Saiu sem enviar o formulário";
     }
-    case "form_submit_attempt":
-      return "Clicou em enviar o formulário";
+    case "form_submit_attempt": {
+      if (!Array.isArray(p.invalid)) return "Clicou em enviar o formulário";
+      const missing = p.invalid.map((f) => FIELD_LABELS[str(f)]).filter(Boolean);
+      return missing.length ? `Clicou em enviar, mas faltou ${missing.join(" e ")}` : "Clicou em enviar, mas faltou preencher algum campo";
+    }
     case "lead_submitted": {
       const intent = INTENT_LABELS[str(p.intent)];
       return intent ? `Enviou o formulário (${intent})` : "Enviou o formulário";

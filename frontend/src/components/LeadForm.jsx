@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { isRadarEnabled } from "@/lib/radar";
+import { isRadarEnabled, track } from "@/lib/radar";
 import { submitLead } from "@/lib/radar/submitLead";
 import { isRescuable, rescueLead, clearPendingLead } from "@/lib/radar/pendingLead";
 import { modalFormId } from "@/lib/leadCapture";
@@ -95,11 +95,27 @@ const LeadForm = ({ variant = "full", source = "site", onSendingChange }) => {
     if (first && fieldRefs[first].current) fieldRefs[first].current.focus();
   };
 
+  // The native submit only happens with valid data: GTM's legacy form trigger is still the
+  // Google Ads conversion, and a tap on a half-empty form must not count. Enter in a field clicks
+  // this button too, so both paths stop here. Radar's collector only sees native submits, so the
+  // failed attempt is recorded here (field names only, never values).
+  const onSubmitClick = (e) => {
+    if (lockRef.current) { e.preventDefault(); return; }
+    trackLeadFormSubmitAttempt();
+    const errs = validateLead(values);
+    const invalid = FIELD_ORDER.filter((f) => errs[f]);
+    if (!invalid.length) return; // -> native submit -> onSubmit
+    e.preventDefault();
+    setErrors(errs);
+    setValidated(true);
+    focusFirst(errs);
+    track("form_submit_attempt", { form_id: elementId, invalid });
+  };
+
   const onSubmit = async (e) => {
     // GTM's document listeners still receive this submit event; we only stop the page reload.
     e.preventDefault();
     if (lockRef.current) return;
-    trackLeadFormSubmitAttempt();
 
     const errs = validateLead(values);
     setErrors(errs);
@@ -263,6 +279,7 @@ const LeadForm = ({ variant = "full", source = "site", onSendingChange }) => {
 
       <button
         type="submit"
+        onClick={onSubmitClick}
         disabled={sending}
         aria-busy={sending ? "true" : "false"}
         className={`${!compact ? "btn-gold" : notice ? "btn-secondary-outline" : "btn-whatsapp"} w-full min-h-[52px] !mt-5 disabled:cursor-wait disabled:opacity-80 disabled:!transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB4E8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1930]`}
