@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert";
-import { type AdsPayload, handleAdsSync, LIMITS, parsePayload } from "./handler.ts";
+import { type AdsPayload, type CommandResult, handleAdsSync, LIMITS, parsePayload } from "./handler.ts";
 
 const SECRET = "s3cr3t-radar-ads-0123456789";
 
@@ -14,11 +14,26 @@ const valid = {
 
 function mk(opts: { body?: string; secret?: string | undefined; header?: string | null; method?: string; fail?: boolean } = {}) {
   const got: AdsPayload[] = [];
+  const calls: string[] = [];
   const deps = {
     secret: "secret" in opts ? opts.secret : SECRET,
     ingest: (p: AdsPayload) => {
       got.push(p);
+      calls.push("ingest");
       return opts.fail ? Promise.reject(new Error("db down")) : Promise.resolve({ campaigns: 1, keywords: 1, clicks: 1 });
+    },
+    ingestState: (p: AdsPayload) => {
+      got.push(p);
+      calls.push("state");
+      return Promise.resolve({ state_campaigns: 1, state_keywords: 1, search_terms: 1, networks: 1 });
+    },
+    report: (cust: string, results: CommandResult[]) => {
+      calls.push(`report:${cust}:${JSON.stringify(results)}`);
+      return Promise.resolve(results.length);
+    },
+    claim: (cust: string) => {
+      calls.push(`claim:${cust}`);
+      return Promise.resolve([{ id: 7, kind: "campaign_status", campaign_id: "111", value: { status: "PAUSED" } }]);
     },
   };
   const headers: Record<string, string> = { "content-type": "application/json" };
@@ -30,7 +45,7 @@ function mk(opts: { body?: string; secret?: string | undefined; header?: string 
     headers,
     body: method === "POST" ? (opts.body ?? JSON.stringify(valid)) : undefined,
   });
-  return { got, res: handleAdsSync(req, deps) };
+  return { got, calls, res: handleAdsSync(req, deps) };
 }
 
 Deno.test("payload valido -> 200, ingest recebe dados limpos", async () => {
@@ -119,4 +134,61 @@ Deno.test("falha no banco -> 500 generico", async () => {
   const r = await res;
   assertEquals(r.status, 500);
   assertEquals(await r.json(), { ok: false, error: "server_error" });
+});
+
+const state = {
+  campaigns: [{ campaign_id: "111", campaign_name: "SBC", status: "ENABLED", channel: "SEARCH", bidding_strategy: "MAXIMIZE_CONVERSIONS", budget_id: "55", budget_micros: "100000000", budget_shared: false }],
+  keywords: [{ campaign_id: "111", ad_group_id: "901", criterion_id: "7001", ad_group_name: "Aptos", keyword_text: "apto sbc", match_type: "PHRASE", status: "PAUSED" }],
+};
+const insights = {
+  date_from: "2026-10-20", date_to: "2026-11-18",
+  search_terms: [{ campaign_id: "111", ad_group_id: "901", search_term: " apto 3 dorms sbc ", status: "NONE", impressions: "10", clicks: "2", cost_micros: "3000000", conversions: 0 }],
+  networks: [{ campaign_id: "111", network: "YOUTUBE", impressions: "100", clicks: "5", cost_micros: "9000000", conversions: 0 }],
+};
+
+Deno.test("estado e insights vao para ingestState, sem contar como sincronizacao de custo", async () => {
+  const { got, calls, res } = mk({ body: JSON.stringify({ customer_id: "1234567890", state, insights }) });
+  const r = await res;
+  assertEquals(r.status, 200);
+  assertEquals(await r.json(), { ok: true, state_campaigns: 1, state_keywords: 1, search_terms: 1, networks: 1 });
+  assertEquals(calls, ["state"]);
+  assertEquals(got[0].state?.campaigns?.[0].budget_micros, 100000000);
+  assertEquals(got[0].state?.keywords?.[0].status, "PAUSED");
+  assertEquals(got[0].insights?.search_terms?.[0].search_term, "apto 3 dorms sbc");
+  assertEquals(got[0].insights?.networks?.[0].network, "YOUTUBE");
+});
+
+Deno.test("resultados sao gravados antes de buscar novos comandos; pull devolve os comandos", async () => {
+  const results = [{ id: 5, ok: true }, { id: 6, ok: false, error: "budget too low" }];
+  const { calls, res } = mk({ body: JSON.stringify({ customer_id: "1234567890", results, pull: true }) });
+  const r = await res;
+  assertEquals(r.status, 200);
+  const body = await r.json();
+  assertEquals(body.reported, 2);
+  assertEquals(body.commands, [{ id: 7, kind: "campaign_status", campaign_id: "111", value: { status: "PAUSED" } }]);
+  assertEquals(calls, [
+    'report:1234567890:[{"id":5,"ok":true,"error":null},{"id":6,"ok":false,"error":"budget too low"}]',
+    "claim:1234567890",
+  ]);
+});
+
+Deno.test("estado, insights e resultados invalidos -> 400 dizendo onde", async () => {
+  const base = { customer_id: "1234567890" };
+  const cases: [unknown, string][] = [
+    [{ ...base, state: { campaigns: [{ ...state.campaigns[0], campaign_id: "x" }] } }, "state.campaigns[0].campaign_id"],
+    [{ ...base, state: { campaigns: [{ ...state.campaigns[0], budget_shared: "sim" }] } }, "state.campaigns[0].budget_shared"],
+    [{ ...base, state: { keywords: [{ ...state.keywords[0], criterion_id: null }] } }, "state.keywords[0].criterion_id"],
+    [{ ...base, insights: { ...insights, date_from: "2026-11-19" } }, "insights.date_from"],
+    [{ ...base, insights: { ...insights, search_terms: [{ ...insights.search_terms[0], search_term: "  " }] } }, "insights.search_terms[0].search_term"],
+    [{ ...base, results: [{ id: "5", ok: true }] }, "results[0].id"],
+    [{ ...base, results: [{ id: 5 }] }, "results[0].ok"],
+    [{ ...base, pull: "yes" }, "pull"],
+  ];
+  for (const [body, at] of cases) {
+    const { calls, res } = mk({ body: JSON.stringify(body) });
+    const r = await res;
+    assertEquals(r.status, 400, at);
+    assertEquals(await r.json(), { ok: false, error: "invalid_payload", at });
+    assertEquals(calls, []);
+  }
 });

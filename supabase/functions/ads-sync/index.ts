@@ -5,13 +5,18 @@ const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
   auth: { persistSession: false },
 });
 
+async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  const { data, error } = await sb.rpc(fn, args);
+  if (error) throw new Error(error.message);
+  return data as T;
+}
+
 Deno.serve((req) =>
   handleAdsSync(req, {
     secret: Deno.env.get("RADAR_ADS_SECRET"),
-    async ingest(p) {
-      const { data, error } = await sb.rpc("ads_ingest", { p });
-      if (error) throw new Error(error.message);
-      return data as Record<string, number>;
-    },
+    ingest: (p) => rpc<Record<string, number>>("ads_ingest", { p }),
+    ingestState: (p) => rpc<Record<string, number>>("ads_state_ingest", { p }),
+    report: (cust, results) => rpc<number>("ads_commands_report", { cust, results }),
+    claim: (cust) => rpc<unknown[]>("ads_commands_claim", { cust }),
   })
 );

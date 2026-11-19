@@ -6,6 +6,7 @@ import { PERIODS, periodRange, todaySP } from "../lib/period";
 import { relativeTimeBR, formatDateTimeBR } from "../lib/format";
 import { adsTotals, aggregateAdsCampaigns, aggregateAdsKeywords, matchTypeLabel } from "../lib/ads";
 import { Panel, LoadError, Empty } from "./parts";
+import AdsManager from "./AdsManager";
 import { Segmented, periodText } from "./LeadsPage";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -316,6 +317,8 @@ export default function AnunciosPage() {
             <Kpi loading={loadingKpis} label="CPC médio" value={totals.cpc === null ? dash : money.format(totals.cpc)} />
             <Kpi loading={loadingKpis} label="Conversões no Google" value={decFmt.format(totals.google_conversions)} hint="O que o Google contou" />
           </section>
+
+          <AdsManager />
 
           <Panel
             label="Campanhas"
