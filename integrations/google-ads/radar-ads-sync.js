@@ -1,5 +1,5 @@
 /**
- * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 2.1.
+ * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 2.2.
  *
  * Como instalar (uma vez):
  *   1. Google Ads → Ferramentas → Ações em massa → Scripts → abra o script "Radar" (ou "+" para um novo).
@@ -330,7 +330,7 @@ function radarLocationTargets_() {
     rows = rows.concat(radarRows_(
       'SELECT campaign.id, campaign.geo_target_type_setting.positive_geo_target_type, ' +
       'campaign.network_settings.target_search_network, campaign.network_settings.target_partner_search_network, ' +
-      'campaign.network_settings.target_content_network, campaign.url_expansion_opt_out ' +
+      'campaign.network_settings.target_content_network ' +
       'FROM campaign WHERE campaign.status != \'REMOVED\'',
       function (r) {
         return {
@@ -339,8 +339,7 @@ function radarLocationTargets_() {
           geo_target_type: radarGet_(r, 'campaign.geoTargetTypeSetting.positiveGeoTargetType'),
           search_network: radarGet_(r, 'campaign.networkSettings.targetSearchNetwork'),
           partner_network: radarGet_(r, 'campaign.networkSettings.targetPartnerSearchNetwork'),
-          content_network: radarGet_(r, 'campaign.networkSettings.targetContentNetwork'),
-          url_expansion_opt_out: radarGet_(r, 'campaign.urlExpansionOptOut')
+          content_network: radarGet_(r, 'campaign.networkSettings.targetContentNetwork')
         };
       }));
   } catch (e) {

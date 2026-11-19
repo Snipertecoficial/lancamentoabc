@@ -247,11 +247,13 @@ Deno.test("relatorios: localizacao com nome do lugar, segmentacao, acoes de conv
   assertEquals(reports[1].rows[0].location_name, "Ipiranga");
   assertEquals(reports[2].date_from, null);
   assertEquals(reports[2].rows[0], { kind: "criterion", campaign_id: "111", type: "PROXIMITY", negative: false, location: null, radius: 15, radius_units: "KILOMETERS", city: "São Bernardo do Campo", street: null, lat_micro: -23691000, lng_micro: -46565000 });
-  assertEquals(reports[2].rows[1], { kind: "settings", campaign_id: "111", geo_target_type: "PRESENCE_OR_INTEREST", search_network: true, partner_network: true, content_network: false, url_expansion_opt_out: null });
+  assertEquals(reports[2].rows[1], { kind: "settings", campaign_id: "111", geo_target_type: "PRESENCE_OR_INTEREST", search_network: true, partner_network: true, content_network: false });
   assertEquals(reports[3].rows[0], { conversion_action_id: "77", name: "RD - Formulário", status: "ENABLED", type: "WEBPAGE", category: "SUBMIT_LEAD_FORM", primary_for_goal: true, counting_type: "ONE_PER_CLICK", in_conversions: true });
   assertEquals(reports[4].rows[0].conversion_action_name, "RD - Formulário");
   for (const r of reports) for (const row of r.rows) for (const k of Object.keys(row)) assert(/^[a-z_]{1,40}$/.test(k), k);
   assert(queries.some((q) => q.includes("geo_target_constant.resource_name IN ('geoTargetConstants/1001773', 'geoTargetConstants/9999')")));
+  // Google Ads Scripts rejected this field on 19/11 (UNRECOGNIZED_FIELD) and the whole settings query failed.
+  assert(!queries.some((q) => q.includes("url_expansion_opt_out")));
 });
 
 Deno.test("relatorio que falha manda o erro e os outros seguem", () => {
