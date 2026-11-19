@@ -13,6 +13,7 @@ jest.mock("@/lib/radar", () => ({
   isRadarEnabled: () => true,
   sessionMeta: () => ({ landing_url: "http://localhost/" }),
   track: (...a) => mockTrack(...a),
+  chatCode: () => "A1B2C3",
 }));
 
 // Lets a test make the (lazy) modal crash, to check the fallback to the bottom form.
@@ -223,32 +224,6 @@ describe("CTAs open the capture modal", () => {
     await settleFocus();
     expect(modalForm()).toBeNull();
     expect(document.activeElement).toBe(cta);
-  });
-
-  test("opened from the floating button (hidden while open): focus returns to it when it reappears", async () => {
-    await mount();
-    floating().focus();
-    await act(async () => { floating().click(); });
-    await flush();
-    expect(floating()).toBeNull();
-    await pressEsc();
-    await settleFocus();
-    expect(floating()).not.toBeNull();
-    expect(document.activeElement).toBe(floating());
-  });
-
-  test("floating opener that stays hidden after closing -> focus falls back to the first CTA", async () => {
-    await mount(<LeadCaptureProvider><HeroPage /></LeadCaptureProvider>);
-    const hero = $('[data-hero-ctas]');
-    await fireIO(hero, { isIntersecting: false, boundingClientRect: { top: -300, bottom: -200 } });
-    floating().focus();
-    await act(async () => { floating().click(); });
-    await flush();
-    await fireIO(hero, { isIntersecting: true, boundingClientRect: { top: 10, bottom: 110 } }); // back at the hero
-    await pressEsc();
-    await settleFocus();
-    expect(floating()).toBeNull();
-    expect(document.activeElement).toBe($('[data-testid="hero-cta"]'));
   });
 
   test("close button closes the modal", async () => {
@@ -471,16 +446,26 @@ describe("mobile bottom sheet", () => {
 });
 
 describe("floating WhatsApp button", () => {
-  test("shown on the landing; opens the modal and hides while it is open; back after closing", async () => {
+  test("shown on the landing; opens the WhatsApp chat directly (with the site code), no modal", async () => {
     await mount();
     expect(floating()).not.toBeNull();
     expect(floating().getAttribute("aria-label")).toMatch(/Falar com corretor/);
     await act(async () => { floating().click(); });
     await flush();
+    expect(modalForm()).toBeNull();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    const text = new URL(openSpy.mock.calls[0][0]).searchParams.get("text");
+    expect(text).toBe(`${WA_MESSAGES.general}\n\nCódigo do site: A1B2C3`);
+    expect(window.dataLayer.filter((e) => e.event === "whatsapp_click")[0].link_location).toBe("floating_whatsapp");
+    expect(mockTrack).toHaveBeenCalledWith("whatsapp_click", { source: "floating_whatsapp", code: "A1B2C3" }, { name: "direct" });
+    expect(floating()).not.toBeNull();
+  });
+
+  test("hidden while the capture modal is open (opened by another CTA); back after closing", async () => {
+    await mount();
+    await clickHero();
     expect(modalForm()).not.toBeNull();
     expect(floating()).toBeNull();
-    expect(window.dataLayer.filter((e) => e.event === "whatsapp_click")[0].link_location).toBe("floating_whatsapp");
-    expect(mockTrack).toHaveBeenCalledWith("form_view", { form_id: "modal-floating_whatsapp" });
     await act(async () => { $('button[aria-label="Fechar"]').click(); });
     await flush();
     expect(floating()).not.toBeNull();

@@ -1,5 +1,5 @@
 import React from "react";
-import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
+import { openWhatsAppDirect, WA_MESSAGES } from "@/lib/whatsapp";
 import { Instagram, Mail, MapPin, MessageCircle, Youtube } from "lucide-react";
 import EspontoneLogo from "@/components/EspontoneLogo";
 
@@ -22,7 +22,7 @@ const Footer = () => {
             <h4 className="font-display text-lg text-[#F0F5FA] mb-4">Contato</h4>
             <ul className="space-y-3 font-sans text-sm text-[#F0F5FA]/70">
               <li>
-                <button onClick={() => openWhatsApp(WA_MESSAGES.general, "footer")}
+                <button onClick={() => openWhatsAppDirect(WA_MESSAGES.general, "footer")}
                   className="flex items-center gap-2 hover:text-[#7DB4E8] transition-colors"
                   data-testid="footer-whatsapp">
                   <MessageCircle size={14} /> (11) 94038-3680

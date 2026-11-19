@@ -3,6 +3,7 @@
 // endpoint without number so it opens the WhatsApp chooser.
 import { trackWhatsAppClick } from "@/lib/tracking";
 import { openLeadCapture } from "@/lib/leadCapture";
+import { track, chatCode } from "@/lib/radar";
 
 const WHATSAPP_PHONE = process.env.REACT_APP_WHATSAPP_PHONE || "5511940383680"; // Ex: 5511999999999
 export function buildWhatsAppUrl(message = "", customPhone = null) {
@@ -15,8 +16,24 @@ export function buildWhatsAppUrl(message = "", customPhone = null) {
   return `https://api.whatsapp.com/send?text=${encoded}`;
 }
 
-// Every broker CTA first asks for name + WhatsApp (LeadCaptureModal); the chat itself only opens
-// after the lead is captured (/obrigado). `location` labels the GTM click and the modal's source.
+// "Falar com corretor" buttons and the phone number: straight to the chat (new tab), no form. The
+// message carries the site code so the broker can trace the visit; Radar and GTM see the click.
+export function openWhatsAppDirect(message = "", location = "site") {
+  const code = chatCode();
+  const url = buildWhatsAppUrl(`${message}\n\nCódigo do site: ${code}`);
+  track("whatsapp_click", { source: location, code }, { name: "direct" });
+  trackWhatsAppClick(location);
+  const w = window.open(url, "_blank");
+  if (w) {
+    try { w.opener = null; } catch (e) { /* ignore */ }
+    return;
+  }
+  window.location.href = url; // popup blocked
+}
+
+// CTAs that promise something (visit, prices, plans) first ask for name + WhatsApp
+// (LeadCaptureModal); the chat opens after the lead is captured (/obrigado). `location` labels
+// the GTM click and the modal's source.
 export function openWhatsApp(message = "", location = "site") {
   trackWhatsAppClick(location);
   if (openLeadCapture({ source: location })) return;

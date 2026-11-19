@@ -44,6 +44,14 @@ export const CTA_LABELS = {
 
 const FIELD_LABELS = { name: "Nome", phone: "Celular", mobile_phone: "Celular", email: "E-mail", intent: "Objetivo" };
 const INTENT_LABELS = { morar: "quer morar", investir: "quer investir" };
+// openWhatsAppDirect `location` values -> where the visitor clicked.
+const DIRECT_SOURCES = {
+  floating_whatsapp: "botão flutuante",
+  header_desktop: "Fale com corretor, topo",
+  header_mobile: "Fale com corretor, menu do celular",
+  hero_falar_corretor: "Falar com corretor",
+  footer: "telefone do rodapé",
+};
 const MILESTONES = new Set(["lead_submitted", "thank_you_view", "whatsapp_click"]);
 const FALLBACK = "Outra interação na página";
 
@@ -146,6 +154,11 @@ export function labelFor(event) {
       return "Chegou na página de obrigado";
     case "whatsapp_click": {
       if (event.name === "thank_you_auto_redirect") return "Foi levado ao WhatsApp automaticamente";
+      if (event.name === "direct") {
+        const from = DIRECT_SOURCES[str(p.source)];
+        const code = /^[0-9A-F]{6}$/.test(str(p.code) || "") ? `, código ${p.code}` : "";
+        return `Abriu o WhatsApp direto${from ? ` (${from})` : ""}${code}`;
+      }
       const l = ctaLabel(p.label);
       return l ? `Clicou para ir ao WhatsApp (${l})` : "Clicou para ir ao WhatsApp";
     }

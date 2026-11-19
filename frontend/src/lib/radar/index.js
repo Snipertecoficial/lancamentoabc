@@ -1,5 +1,6 @@
 import { RADAR_URL, RADAR_ENV } from "./config";
 import { uuid, getSessionId, getVisitorId, clearVisitorId, startNewSession } from "./ids";
+export { chatCode } from "./ids";
 import { hasConsent, onConsentChange } from "./consent";
 import { readAttribution, campaignOf, hasCampaignParams } from "./attribution";
 import { createQueue } from "./queue";

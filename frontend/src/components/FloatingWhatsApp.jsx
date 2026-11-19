@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from "react";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
-import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
+import { openWhatsAppDirect, WA_MESSAGES } from "@/lib/whatsapp";
 import { onPanelRoute } from "@/lib/radar/routes";
 
-export const FLOATING_ATTR = "data-capture-floating"; // lets the provider find it again for focus
 const onThankYou = () => /^\/obrigado(\/|$)/i.test(window.location.pathname);
 const MOBILE_MAX = 767;
 const GAP = 12; // space between the cookie banner and the button
 
-// Fixed "Falar com corretor" button: opens the capture modal (via openWhatsApp, which keeps the GTM
-// whatsapp_click signal). Shown only once the hero CTAs ([data-hero-ctas]) were scrolled past (pages
+// Fixed "Falar com corretor" button: opens the WhatsApp chat directly (openWhatsAppDirect keeps the
+// GTM whatsapp_click signal). Shown only once the hero CTAs ([data-hero-ctas]) were scrolled past (pages
 // without them show it at once); hidden while the modal is open and while the bottom form is on
 // screen (it never covers its submit button); on phones it rises above the cookie banner.
 const FloatingWhatsApp = ({ hidden = false }) => {
@@ -87,10 +86,9 @@ const FloatingWhatsApp = ({ hidden = false }) => {
   return (
     <button
       type="button"
-      onClick={() => openWhatsApp(WA_MESSAGES.general, "floating_whatsapp")}
+      onClick={() => openWhatsAppDirect(WA_MESSAGES.general, "floating_whatsapp")}
       aria-label="Falar com corretor pelo WhatsApp"
       data-testid="floating-whatsapp"
-      {...{ [FLOATING_ATTR]: "" }}
       data-lift={lift}
       style={{ bottom: `calc(env(safe-area-inset-bottom, 0px) + ${16 + lift}px)` }}
       className="btn-whatsapp fixed right-4 z-[9980] min-h-[48px] !px-5 !py-0 text-[0.95rem] shadow-[0_14px_32px_-12px_rgba(0,0,0,.6)] animate-in fade-in-0 slide-in-from-bottom-3 duration-500 motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1930] md:right-6 md:h-14 md:w-14 md:!p-0"

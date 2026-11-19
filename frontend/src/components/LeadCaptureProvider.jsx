@@ -2,7 +2,7 @@ import React, { createContext, lazy, Suspense, useCallback, useContext, useEffec
 import { Loader2 } from "lucide-react";
 import { setLeadCaptureOpener } from "@/lib/leadCapture";
 import { scrollToLeadForm } from "@/lib/whatsapp";
-import FloatingWhatsApp, { FLOATING_ATTR } from "@/components/FloatingWhatsApp";
+import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 
 // The modal (Radix Dialog + vaul) is its own chunk, so the landing's first paint does not carry it.
 // It is prefetched when the browser is idle, or as soon as a pointer goes down on a CTA.
@@ -17,8 +17,6 @@ export const useLeadCapture = () => useContext(LeadCaptureContext);
 const isMobileViewport = () => {
   try { return window.matchMedia("(max-width: 767px)").matches; } catch (e) { return false; }
 };
-
-const firstCta = () => document.querySelector("[data-hero-ctas] button, [data-hero-ctas] a");
 
 // If the modal chunk fails to load or the modal crashes, the visitor still reaches a form.
 class ModalBoundary extends React.Component {
@@ -68,18 +66,13 @@ export function LeadCaptureProvider({ children, floating = true }) {
     setModal((m) => ({ ...m, open: false, mounted: false }));
     scrollToLeadForm();
   }, []);
-  // Back to the CTA that opened the modal. The floating button is unmounted while the modal is
-  // open, so it is looked up again (it reappears on close) or the first hero CTA takes the focus.
+  // Back to the CTA that opened the modal.
   const onCloseAutoFocus = useCallback((e) => {
     const el = opener.current;
     opener.current = null;
     if (!el || el === document.body) return;
     e.preventDefault();
-    let target = el.isConnected ? el : null;
-    if (!target && el.hasAttribute && el.hasAttribute(FLOATING_ATTR)) {
-      target = document.querySelector(`[${FLOATING_ATTR}]`) || firstCta();
-    }
-    if (target) target.focus({ preventScroll: true });
+    if (el.isConnected) el.focus({ preventScroll: true });
   }, []);
 
   useEffect(() => setLeadCaptureOpener(open), [open]);

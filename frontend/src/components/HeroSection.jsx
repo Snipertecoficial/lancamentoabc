@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Bed, Car, Waves, Ruler, Sparkles, PlayCircle, MessageCircle, CalendarCheck, Play, Pause, Volume2, VolumeX } from "lucide-react";
-import { openWhatsApp, WA_MESSAGES } from "@/lib/whatsapp";
+import { openWhatsApp, openWhatsAppDirect, WA_MESSAGES } from "@/lib/whatsapp";
 
 const ATTRS = [
   { icon: Sparkles, label: "Varanda Gourmet", sub: "Lançamento SBC" },
@@ -161,7 +161,7 @@ const HeroSection = () => {
                 </button>
                 <button
                   className="btn-outline-gold whitespace-nowrap"
-                  onClick={() => openWhatsApp(WA_MESSAGES.finalCta, "hero_falar_corretor")}
+                  onClick={() => openWhatsAppDirect(WA_MESSAGES.finalCta, "hero_falar_corretor")}
                   data-testid="hero-cta-talk"
                 >
                   <MessageCircle size={16} /> Falar com corretor

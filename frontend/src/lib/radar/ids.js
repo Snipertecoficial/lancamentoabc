@@ -29,6 +29,12 @@ export function getSessionId(now = Date.now()) {
   }
 }
 
+// Short code sent in WhatsApp chats opened from the site: the start of the session id, so a broker
+// can find which ad/keyword the visit came from.
+export function chatCode(now = Date.now()) {
+  return getSessionId(now).replace(/-/g, "").slice(0, 6).toUpperCase();
+}
+
 // Force a brand-new session (new id, fresh 30-min clock), e.g. when a new ad landing arrives.
 export function startNewSession(now = Date.now()) {
   const sid = uuid();

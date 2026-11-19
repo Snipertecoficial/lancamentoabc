@@ -49,6 +49,8 @@ describe("labelFor", () => {
     ["thank_you_view", ev("thank_you_view", {}), "Chegou na página de obrigado"],
     ["whatsapp_click", ev("whatsapp_click", { lead_token: "tok-secret" }, { name: "thank_you_page" }), "Clicou para ir ao WhatsApp"],
     ["whatsapp_click auto redirect", ev("whatsapp_click", { lead_token: "tok-secret" }, { name: "thank_you_auto_redirect" }), "Foi levado ao WhatsApp automaticamente"],
+    ["whatsapp_click direct", ev("whatsapp_click", { source: "floating_whatsapp", code: "A1B2C3" }, { name: "direct" }), "Abriu o WhatsApp direto (botão flutuante), código A1B2C3"],
+    ["whatsapp_click direct, unknown source / bad code", ev("whatsapp_click", { source: "x", code: "<b>" }, { name: "direct" }), "Abriu o WhatsApp direto"],
     ["whatsapp_click with known label", ev("whatsapp_click", { label: "footer-whatsapp", href: "https://wa.me/55" }), "Clicou para ir ao WhatsApp (WhatsApp do rodapé)"],
     ["rage_click", ev("rage_click", { label: "hero-cta-unit", x: 1, y: 1 }), "Clicou repetidas vezes (frustração) em “Garanta sua unidade”"],
     ["rage_click without label", ev("rage_click", { label: "" }), "Clicou repetidas vezes no mesmo lugar (frustração)"],
