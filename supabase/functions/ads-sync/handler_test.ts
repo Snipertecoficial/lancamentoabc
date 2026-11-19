@@ -225,3 +225,16 @@ Deno.test("relatorios vao para ingestReports com valores planos; nome desconheci
     assertEquals(await rr.json(), { ok: false, error: "invalid_payload", at });
   }
 });
+
+Deno.test("script 3.0: relatorios de qualidade, motivos da campanha e aprovacao dos anuncios sao aceitos", async () => {
+  const reports = [
+    { report: "keyword_quality", rows: [{ campaign_id: "111", keyword_text: "apartamento sbc", quality_score: 3, landing_page_quality: "BELOW_AVERAGE" }] },
+    { report: "campaign_serving", rows: [{ kind: "status", campaign_id: "111", primary_status: "LIMITED", reasons: "BUDGET_CONSTRAINED,HAS_ADS_LIMITED_BY_POLICY" }] },
+    { report: "ads_review", rows: [{ campaign_id: "111", ad_id: "9", approval_status: "APPROVED_LIMITED", final_url: "https://x.test/" }] },
+  ];
+  const { calls, res } = mk({ body: JSON.stringify({ customer_id: "1234567890", reports }) });
+  const r = await res;
+  assertEquals(r.status, 200);
+  assertEquals(await r.json(), { ok: true, reports: 3 });
+  assertEquals(calls, ["reports:1234567890:3"]);
+});

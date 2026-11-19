@@ -1,5 +1,5 @@
 /**
- * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 2.2.
+ * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 3.0.
  *
  * Como instalar (uma vez):
  *   1. Google Ads → Ferramentas → Ações em massa → Scripts → abra o script "Radar" (ou "+" para um novo).
@@ -11,7 +11,8 @@
  *
  * O que ele faz a cada execução:
  *   - aplica as alterações pedidas no painel (pausar/ativar campanha ou palavra-chave, orçamento diário,
- *     palavra-chave negativa) e devolve o resultado de cada uma;
+ *     palavra-chave negativa ou nova, raio de localização, "Presença", parceiros de pesquisa e conversão
+ *     principal/secundária) e devolve o resultado de cada uma;
  *   - envia custo, cliques, impressões e conversões por dia, por campanha e por palavra-chave
  *     (últimos 90 dias, porque o Google ainda ajusta dias recentes) e o código de cada clique (gclid)
  *     dos últimos 30 dias, para ligar cada lead à campanha exata;
@@ -19,7 +20,8 @@
  *     pesquisa e o custo por rede (Pesquisa, YouTube, Display...) dos últimos 30 dias;
  *   - envia relatórios para análise: de onde as pessoas viram os anúncios (cidade e bairro), como cada
  *     campanha está segmentada (raio, cidades, presença/interesse, redes) e quais conversões existem
- *     e quais geraram as conversões (últimos 90 dias);
+ *     e quais geraram as conversões (últimos 90 dias), além do índice de qualidade das palavras-chave,
+ *     dos motivos do Google para cada campanha aparecer pouco e da aprovação dos anúncios;
  *   - depois fica uns 25 minutos olhando a fila do painel a cada minuto, para aplicar alterações rápido.
  * Nenhum dado pessoal sai do Google Ads.
  */
@@ -128,16 +130,61 @@ function radarApply_(ctx, c) {
       op = { adGroupCriterionOperation: { update: { resourceName: prefix + '/adGroupCriteria/' + c.ad_group_id + '~' + c.criterion_id, status: v.status }, updateMask: 'status' } };
     } else if (c.kind === 'campaign_negative') {
       op = { campaignCriterionOperation: { create: { campaign: prefix + '/campaigns/' + c.campaign_id, negative: true, keyword: { text: v.text, matchType: v.match_type } } } };
+    } else if (c.kind === 'keyword_add') {
+      op = { adGroupCriterionOperation: { create: { adGroup: prefix + '/adGroups/' + c.ad_group_id, status: 'ENABLED', keyword: { text: v.text, matchType: v.match_type } } } };
+    } else if (c.kind === 'campaign_settings') {
+      var upd = { resourceName: prefix + '/campaigns/' + c.campaign_id };
+      var mask = [];
+      if (v.geo_target_type) {
+        upd.geoTargetTypeSetting = { positiveGeoTargetType: v.geo_target_type };
+        mask.push('geo_target_type_setting.positive_geo_target_type');
+      }
+      if (typeof v.partner_network === 'boolean') {
+        upd.networkSettings = { targetPartnerSearchNetwork: v.partner_network };
+        mask.push('network_settings.target_partner_search_network');
+      }
+      if (!mask.length) return fail('Nada para mudar nesta campanha.');
+      op = { campaignOperation: { update: upd, updateMask: mask.join(',') } };
+    } else if (c.kind === 'conversion_goal') {
+      op = { conversionActionOperation: { update: { resourceName: prefix + '/conversionActions/' + v.conversion_action_id, primaryForGoal: v.primary }, updateMask: 'primary_for_goal' } };
+    } else if (c.kind === 'campaign_location') {
+      return radarSetRadius_(prefix, c, fail);
     } else {
       return fail('Tipo de alteração desconhecido: ' + c.kind);
     }
     var result = AdsApp.mutate(op);
     if (result.isSuccessful()) return { id: c.id, ok: true };
-    var errors = result.getErrorMessages() || [];
-    return fail(errors.length ? errors.join(' | ') : 'O Google Ads recusou a alteração.');
+    return fail(radarErrors_(result));
   } catch (e) {
     return fail(String(e && e.message ? e.message : e));
   }
+}
+
+function radarErrors_(result) {
+  var errors = result.getErrorMessages() || [];
+  return errors.length ? errors.join(' | ') : 'O Google Ads recusou a alteração.';
+}
+
+// Replaces every positive city/radius of the campaign with one radius around a point. The radius is
+// created first, so a failure never leaves the campaign without a location.
+function radarSetRadius_(prefix, c, fail) {
+  var v = c.value || {};
+  var old = radarRows_(
+    'SELECT campaign_criterion.resource_name FROM campaign_criterion WHERE campaign.id = ' + Number(c.campaign_id) +
+    ' AND campaign_criterion.type IN (\'LOCATION\', \'PROXIMITY\') AND campaign_criterion.negative = FALSE',
+    function (r) { return radarGet_(r, 'campaignCriterion.resourceName'); });
+  var created = AdsApp.mutate({ campaignCriterionOperation: { create: {
+    campaign: prefix + '/campaigns/' + c.campaign_id,
+    proximity: { geoPoint: { latitudeInMicroDegrees: v.lat_micro, longitudeInMicroDegrees: v.lng_micro }, radius: v.radius_km, radiusUnits: 'KILOMETERS' }
+  } } });
+  if (!created.isSuccessful()) return fail(radarErrors_(created));
+  var left = [];
+  for (var i = 0; i < old.length; i++) {
+    var removed = AdsApp.mutate({ campaignCriterionOperation: { remove: old[i] } });
+    if (!removed.isSuccessful()) left.push(radarErrors_(removed));
+  }
+  if (left.length) return fail('Raio criado, mas ' + left.length + ' local(is) antigo(s) ficaram: ' + left.join(' | '));
+  return { id: c.id, ok: true };
 }
 
 function radarBudgetOf_(campaignId) {
@@ -269,6 +316,9 @@ function radarSendReports_(ctx) {
     add('location_targets', false, radarLocationTargets_);
     add('conversion_actions', false, radarConversionActions_);
     add('conversions_by_action', true, function () { return radarConversionsByAction_(range); });
+    add('keyword_quality', false, radarKeywordQuality_);
+    add('campaign_serving', false, radarCampaignServing_);
+    add('ads_review', false, radarAdsReview_);
     try {
       radarNameLocations_(reports);
     } catch (e) {
@@ -384,6 +434,98 @@ function radarConversionsByAction_(range) {
 }
 
 // Adds location_name / location_canonical / location_type to every row that has a geoTargetConstants/ id.
+// Why a keyword shows little: quality score parts and Google's serving status (active keywords only).
+function radarKeywordQuality_() {
+  return radarRows_(
+    'SELECT campaign.id, ad_group.id, ad_group_criterion.criterion_id, ad_group_criterion.keyword.text, ' +
+    'ad_group_criterion.keyword.match_type, ad_group_criterion.quality_info.quality_score, ' +
+    'ad_group_criterion.quality_info.creative_quality_score, ad_group_criterion.quality_info.post_click_quality_score, ' +
+    'ad_group_criterion.quality_info.search_predicted_ctr, ad_group_criterion.system_serving_status, ' +
+    'ad_group_criterion.approval_status FROM ad_group_criterion WHERE ad_group_criterion.type = \'KEYWORD\' ' +
+    'AND ad_group_criterion.negative = FALSE AND ad_group_criterion.status = \'ENABLED\' AND campaign.status != \'REMOVED\'',
+    function (r) {
+      return {
+        campaign_id: String(radarGet_(r, 'campaign.id')),
+        ad_group_id: String(radarGet_(r, 'adGroup.id')),
+        criterion_id: String(radarGet_(r, 'adGroupCriterion.criterionId')),
+        keyword_text: radarGet_(r, 'adGroupCriterion.keyword.text'),
+        match_type: radarGet_(r, 'adGroupCriterion.keyword.matchType'),
+        quality_score: radarGet_(r, 'adGroupCriterion.qualityInfo.qualityScore'),
+        creative_quality: radarGet_(r, 'adGroupCriterion.qualityInfo.creativeQualityScore'),
+        landing_page_quality: radarGet_(r, 'adGroupCriterion.qualityInfo.postClickQualityScore'),
+        predicted_ctr: radarGet_(r, 'adGroupCriterion.qualityInfo.searchPredictedCtr'),
+        serving_status: radarGet_(r, 'adGroupCriterion.systemServingStatus'),
+        approval_status: radarGet_(r, 'adGroupCriterion.approvalStatus')
+      };
+    });
+}
+
+// Why a campaign shows little: Google's status reasons and the share of searches lost (last 7 days).
+// Two queries, each failing alone (a field this script version does not know only loses its rows).
+function radarCampaignServing_() {
+  var rows = [];
+  var part = function (kind, build) {
+    try {
+      rows = rows.concat(build());
+    } catch (e) {
+      rows.push({ kind: kind + '_error', error: String(e && e.message ? e.message : e).slice(0, 400) });
+    }
+  };
+  part('status', function () {
+    return radarRows_(
+      'SELECT campaign.id, campaign.primary_status, campaign.primary_status_reasons, campaign.serving_status ' +
+      'FROM campaign WHERE campaign.status != \'REMOVED\'',
+      function (r) {
+        var reasons = radarGet_(r, 'campaign.primaryStatusReasons');
+        return {
+          kind: 'status',
+          campaign_id: String(radarGet_(r, 'campaign.id')),
+          primary_status: radarGet_(r, 'campaign.primaryStatus'),
+          reasons: reasons && reasons.join ? reasons.join(',') : reasons,
+          serving_status: radarGet_(r, 'campaign.servingStatus')
+        };
+      });
+  });
+  part('share', function () {
+    return radarRows_(
+      'SELECT campaign.id, metrics.impressions, metrics.search_impression_share, ' +
+      'metrics.search_rank_lost_impression_share, metrics.search_budget_lost_impression_share ' +
+      'FROM campaign WHERE segments.date DURING LAST_7_DAYS AND campaign.advertising_channel_type = \'SEARCH\'',
+      function (r) {
+        return {
+          kind: 'share',
+          campaign_id: String(radarGet_(r, 'campaign.id')),
+          impressions: radarGet_(r, 'metrics.impressions') || 0,
+          impression_share: radarGet_(r, 'metrics.searchImpressionShare'),
+          rank_lost: radarGet_(r, 'metrics.searchRankLostImpressionShare'),
+          budget_lost: radarGet_(r, 'metrics.searchBudgetLostImpressionShare')
+        };
+      });
+  });
+  return rows;
+}
+
+// Ad approval and strength (a disapproved or limited ad explains a campaign that stopped showing).
+function radarAdsReview_() {
+  return radarRows_(
+    'SELECT campaign.id, ad_group.id, ad_group_ad.ad.id, ad_group_ad.status, ad_group_ad.policy_summary.approval_status, ' +
+    'ad_group_ad.policy_summary.review_status, ad_group_ad.ad_strength, ad_group_ad.ad.final_urls ' +
+    'FROM ad_group_ad WHERE ad_group_ad.status != \'REMOVED\' AND campaign.status != \'REMOVED\'',
+    function (r) {
+      var urls = radarGet_(r, 'adGroupAd.ad.finalUrls');
+      return {
+        campaign_id: String(radarGet_(r, 'campaign.id')),
+        ad_group_id: String(radarGet_(r, 'adGroup.id')),
+        ad_id: String(radarGet_(r, 'adGroupAd.ad.id')),
+        status: radarGet_(r, 'adGroupAd.status'),
+        approval_status: radarGet_(r, 'adGroupAd.policySummary.approvalStatus'),
+        review_status: radarGet_(r, 'adGroupAd.policySummary.reviewStatus'),
+        ad_strength: radarGet_(r, 'adGroupAd.adStrength'),
+        final_url: urls && urls.length ? String(urls[0]).slice(0, 300) : null
+      };
+    });
+}
+
 function radarNameLocations_(reports) {
   var ids = {};
   reports.forEach(function (rep) {

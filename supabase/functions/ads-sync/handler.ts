@@ -12,7 +12,10 @@ export const LIMITS = {
   reports: 10, report_rows: 20_000, report_keys: 20,
 } as const;
 // Raw reports kept as JSON for analysis (ads_reports). Values must be flat scalars.
-export const REPORTS = ["locations_city", "locations_detail", "location_targets", "conversion_actions", "conversions_by_action"] as const;
+export const REPORTS = [
+  "locations_city", "locations_detail", "location_targets", "conversion_actions", "conversions_by_action",
+  "keyword_quality", "campaign_serving", "ads_review",
+] as const;
 
 export type CampaignRow = {
   day: string; campaign_id: string; campaign_name: string | null; channel: string | null;

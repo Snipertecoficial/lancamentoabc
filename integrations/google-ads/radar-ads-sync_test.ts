@@ -241,7 +241,7 @@ Deno.test("relatorios: localizacao com nome do lugar, segmentacao, acoes de conv
   const { api, bodies, queries } = load();
   api.main();
   const reports = bodies().find((b) => b.reports)!.reports as { report: string; date_from: string | null; rows: Body[]; error?: string }[];
-  assertEquals(reports.map((r) => r.report), ["locations_city", "locations_detail", "location_targets", "conversion_actions", "conversions_by_action"]);
+  assertEquals(reports.map((r) => r.report), ["locations_city", "locations_detail", "location_targets", "conversion_actions", "conversions_by_action", "keyword_quality", "campaign_serving", "ads_review"]);
   assertEquals(reports[0].date_from, "2026-08-20");
   assertEquals(reports[0].rows[0], { campaign_id: "111", location: "geoTargetConstants/1001773", targeted: true, impressions: "500", clicks: "30", cost_micros: "60000000", conversions: 2, location_name: "Sao Bernardo do Campo", location_canonical: "Sao Bernardo do Campo,State of Sao Paulo,Brazil", location_type: "City" });
   assertEquals(reports[1].rows[0].location_name, "Ipiranga");
@@ -271,4 +271,95 @@ Deno.test("relatorio que falha manda o erro e os outros seguem", () => {
   assertEquals(targets.rows[targets.rows.length - 1], { kind: "settings_error", error: "campo inválido" });
   assertEquals(reports.find((r) => r.report === "locations_city")!.rows.length, 1);
   assertEquals(logs[logs.length - 1], "Radar: ok.");
+});
+
+Deno.test("script 3.0: palavra-chave nova, Presenca + parceiros, conversao secundaria", () => {
+  const commands = [
+    { id: 11, kind: "keyword_add", campaign_id: "111", ad_group_id: "901", value: { text: "apartamento baeta neves", match_type: "PHRASE" } },
+    { id: 12, kind: "campaign_settings", campaign_id: "111", value: { geo_target_type: "PRESENCE", partner_network: false } },
+    { id: 13, kind: "campaign_settings", campaign_id: "111", value: { partner_network: false } },
+    { id: 14, kind: "campaign_settings", campaign_id: "111", value: {} },
+    { id: 15, kind: "conversion_goal", campaign_id: "0", value: { conversion_action_id: "7700779152", primary: false } },
+  ];
+  const { api, bodies, mutations } = load({ commands: [commands] });
+  api.main();
+  assertEquals(mutations, [
+    { adGroupCriterionOperation: { create: { adGroup: "customers/1234567890/adGroups/901", status: "ENABLED", keyword: { text: "apartamento baeta neves", matchType: "PHRASE" } } } },
+    { campaignOperation: { update: { resourceName: "customers/1234567890/campaigns/111", geoTargetTypeSetting: { positiveGeoTargetType: "PRESENCE" }, networkSettings: { targetPartnerSearchNetwork: false } }, updateMask: "geo_target_type_setting.positive_geo_target_type,network_settings.target_partner_search_network" } },
+    { campaignOperation: { update: { resourceName: "customers/1234567890/campaigns/111", networkSettings: { targetPartnerSearchNetwork: false } }, updateMask: "network_settings.target_partner_search_network" } },
+    { conversionActionOperation: { update: { resourceName: "customers/1234567890/conversionActions/7700779152", primaryForGoal: false }, updateMask: "primary_for_goal" } },
+  ]);
+  assertEquals(bodies()[1].results, [
+    { id: 11, ok: true }, { id: 12, ok: true }, { id: 13, ok: true },
+    { id: 14, ok: false, error: "Nada para mudar nesta campanha." },
+    { id: 15, ok: true },
+  ]);
+});
+
+const radiusCmd = { id: 21, kind: "campaign_location", campaign_id: "111", value: { lat_micro: -23683100, lng_micro: -46541600, radius_km: 12 } };
+const oldCities = (q: string): Row[] => q.includes("SELECT campaign_criterion.resource_name")
+  ? [{ campaignCriterion: { resourceName: "customers/1234567890/campaignCriteria/111~1001773" } }, { campaignCriterion: { resourceName: "customers/1234567890/campaignCriteria/111~1001765" } }]
+  : rowsFor(q);
+const proximity = { campaignCriterionOperation: { create: { campaign: "customers/1234567890/campaigns/111", proximity: { geoPoint: { latitudeInMicroDegrees: -23683100, longitudeInMicroDegrees: -46541600 }, radius: 12, radiusUnits: "KILOMETERS" } } } };
+
+Deno.test("script 3.0: raio substitui as cidades: cria o raio primeiro e depois tira as antigas", () => {
+  const { api, bodies, mutations, queries } = load({ commands: [[radiusCmd]], rowsFor: oldCities });
+  api.main();
+  assert(queries.some((q) => q.includes("WHERE campaign.id = 111 AND campaign_criterion.type IN ('LOCATION', 'PROXIMITY') AND campaign_criterion.negative = FALSE")));
+  assertEquals(mutations, [
+    proximity,
+    { campaignCriterionOperation: { remove: "customers/1234567890/campaignCriteria/111~1001773" } },
+    { campaignCriterionOperation: { remove: "customers/1234567890/campaignCriteria/111~1001765" } },
+  ]);
+  assertEquals(bodies()[1].results, [{ id: 21, ok: true }]);
+});
+
+Deno.test("script 3.0: raio recusado nao tira nenhuma cidade; cidade que nao sai vira aviso", () => {
+  const refused = load({ commands: [[radiusCmd]], rowsFor: oldCities, mutate: (op) => ((op.campaignCriterionOperation as Row).create ? { ok: false, errors: ["INVALID_GEO"] } : { ok: true }) });
+  refused.api.main();
+  assertEquals(refused.mutations, [proximity]);
+  assertEquals(refused.bodies()[1].results, [{ id: 21, ok: false, error: "INVALID_GEO" }]);
+
+  let n = 0;
+  const partial = load({ commands: [[radiusCmd]], rowsFor: oldCities, mutate: () => (++n === 3 ? { ok: false, errors: ["NOT_FOUND"] } : { ok: true }) });
+  partial.api.main();
+  assertEquals(partial.bodies()[1].results, [{ id: 21, ok: false, error: "Raio criado, mas 1 local(is) antigo(s) ficaram: NOT_FOUND" }]);
+});
+
+Deno.test("script 3.0: relatorios de qualidade, motivos da campanha e aprovacao dos anuncios", () => {
+  const extra = (q: string): Row[] => {
+    if (q.includes("quality_info.quality_score")) return [{ campaign: { id: "111" }, adGroup: { id: "901" }, adGroupCriterion: { criterionId: "7001", keyword: { text: "apartamento sbc", matchType: "PHRASE" }, qualityInfo: { qualityScore: 3, creativeQualityScore: "AVERAGE", postClickQualityScore: "BELOW_AVERAGE", searchPredictedCtr: "BELOW_AVERAGE" }, systemServingStatus: "RARELY_SERVED", approvalStatus: "APPROVED" } }];
+    if (q.includes("campaign.primary_status")) return [{ campaign: { id: "111", primaryStatus: "LIMITED", primaryStatusReasons: ["BUDGET_CONSTRAINED", "BIDDING_STRATEGY_LEARNING"], servingStatus: "SERVING" } }];
+    if (q.includes("search_impression_share")) return [{ campaign: { id: "111" }, metrics: { impressions: "36", searchImpressionShare: 0.0999, searchRankLostImpressionShare: 0.85, searchBudgetLostImpressionShare: 0.05 } }];
+    if (q.includes("FROM ad_group_ad")) return [{ campaign: { id: "111" }, adGroup: { id: "901" }, adGroupAd: { status: "ENABLED", adStrength: "POOR", ad: { id: "55", finalUrls: ["https://lancamento.espontone.com.br/", "https://x/"] }, policySummary: { approvalStatus: "APPROVED_LIMITED", reviewStatus: "REVIEWED" } } }];
+    return rowsFor(q);
+  };
+  const { api, bodies } = load({ rowsFor: extra });
+  api.main();
+  const reports = bodies().find((b) => b.reports)!.reports as { report: string; rows: Body[] }[];
+  assertEquals(reports.map((r) => r.report), ["locations_city", "locations_detail", "location_targets", "conversion_actions", "conversions_by_action", "keyword_quality", "campaign_serving", "ads_review"]);
+  assertEquals(reports[5].rows[0], { campaign_id: "111", ad_group_id: "901", criterion_id: "7001", keyword_text: "apartamento sbc", match_type: "PHRASE", quality_score: 3, creative_quality: "AVERAGE", landing_page_quality: "BELOW_AVERAGE", predicted_ctr: "BELOW_AVERAGE", serving_status: "RARELY_SERVED", approval_status: "APPROVED" });
+  assertEquals(reports[6].rows, [
+    { kind: "status", campaign_id: "111", primary_status: "LIMITED", reasons: "BUDGET_CONSTRAINED,BIDDING_STRATEGY_LEARNING", serving_status: "SERVING" },
+    { kind: "share", campaign_id: "111", impressions: "36", impression_share: 0.0999, rank_lost: 0.85, budget_lost: 0.05 },
+  ]);
+  assertEquals(reports[7].rows[0], { campaign_id: "111", ad_group_id: "901", ad_id: "55", status: "ENABLED", approval_status: "APPROVED_LIMITED", review_status: "REVIEWED", ad_strength: "POOR", final_url: "https://lancamento.espontone.com.br/" });
+  for (const r of reports) for (const row of r.rows) for (const [k, v] of Object.entries(row)) {
+    assert(/^[a-z_]{1,40}$/.test(k), k);
+    assert(v === null || ["string", "number", "boolean"].includes(typeof v), k);
+  }
+});
+
+Deno.test("script 3.0: campo que o Google nao conhece derruba so a sua parte do relatorio de campanha", () => {
+  const { api, bodies } = load({
+    rowsFor: (q) => {
+      if (q.includes("campaign.primary_status")) throw new Error("UNRECOGNIZED_FIELD: campaign.primary_status");
+      if (q.includes("search_impression_share")) return [{ campaign: { id: "111" }, metrics: { impressions: "10" } }];
+      return rowsFor(q);
+    },
+  });
+  api.main();
+  const serving = (bodies().find((b) => b.reports)!.reports as { report: string; rows: Body[] }[]).find((r) => r.report === "campaign_serving")!;
+  assertEquals(serving.rows[0], { kind: "status_error", error: "UNRECOGNIZED_FIELD: campaign.primary_status" });
+  assertEquals(serving.rows[1].kind, "share");
 });
