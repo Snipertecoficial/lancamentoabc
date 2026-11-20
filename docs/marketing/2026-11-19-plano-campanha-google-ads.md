@@ -87,7 +87,7 @@ com entrada parcelada direto na obra — venha conhecer o decorado.
 |---|---|---|---|
 | Pesquisa #2 (raio 12 km, 25 palavras, 29 negativas) | capturar quem já procura | R$ 80 | médio |
 | PMax nova (raio 12 km, pacote pronto) | volume no YouTube/Discover/Gmail e remarketing automático | R$ 40 (depois dos criativos) | médio |
-| PMax antiga como ponte | trazer tráfego até a nova ficar pronta e testar o WhatsApp direto | R$ 25 (só com seu OK) | baixo |
+| ~~PMax antiga como ponte~~ | descartada em 19/11: fica pausada, só entra a PMax nova | — | — |
 
 Fora do escopo agora: Meta Ads (costuma ser forte para imóveis — avaliar quando a página converter) e
 portais pagos.
@@ -144,7 +144,7 @@ ela aprende com lixo); criativos antes da PMax nova.
 |---|---|---|---|
 | Pesquisa #2 | R$ 80 | R$ 2.400 | 65% |
 | PMax nova (entra por volta de 25/11) | R$ 40 | ≈ R$ 1.000 | 27% |
-| Reserva (ponte da PMax antiga ou reforço no que trouxer lead) | — | ≈ R$ 300 | 8% |
+| Reserva (reforço no canal que trouxer lead real) | — | ≈ R$ 300 | 8% |
 
 Regra: subir no máximo 20% por semana, e só no canal com custo por lead real dentro da meta.
 
@@ -170,4 +170,5 @@ página v1 (publicação só com seu OK).
 2. GTM: conversão de lead em `generate_lead` e conversão "WhatsApp direto" em `whatsapp_click`.
 3. Fotos e vídeos do decorado para a PMax nova.
 4. Confirmar "parcelas desde R$ 3.900" e se há condição de Black Friday.
-5. Decidir a ponte: religar a PMax antiga em R$ 25/dia até a nova entrar.
+
+Decidido em 19/11: a PMax antiga continua pausada; até a PMax nova entrar, só a Pesquisa #2 traz tráfego.
