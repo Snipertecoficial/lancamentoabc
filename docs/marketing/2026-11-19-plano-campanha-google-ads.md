@@ -97,7 +97,8 @@ portais pagos.
 | Quando | O que | Canal | Quem | Situação |
 |---|---|---|---|---|
 | 19/11 | 29 palavras negativas (buscas sem perfil e concorrentes) | Pesquisa | Claude (fila do Radar) | ✅ aplicado |
-| 19–20/11 | Raio de 12 km, "Presença", parceiros desligados, 18 palavras-chave novas; YouTube e WhatsApp como conversão secundária | Pesquisa / conta | Claude (fila do Radar) | na fila |
+| 19/11 | Raio de 12 km, "Presença", parceiros desligados, 18 palavras-chave novas; WhatsApp como conversão secundária | Pesquisa / conta | Claude (fila do Radar) | ✅ aplicado 21:22 |
+| 19/11 | Conversões do YouTube como secundárias | conta | — | o Google não deixa mudar por script; sem efeito na Pesquisa, e a PMax nova usa só "Enviar formulário de lead" |
 | 20–22/11 | **Página v1:** título com Santo André/SBC + na planta + 2/3 dorms; "Quero condições" vira WhatsApp direto ou formulário só com celular; acertar a confusão SBC × Santo André; tirar o texto escondido de SEO; topo mais leve no celular | Site | Claude (publica com seu OK) | a fazer |
 | 20–22/11 | GTM: conversão de lead no evento `generate_lead`; conversão nova "WhatsApp direto" no evento `whatsapp_click` | GTM | Você | a fazer |
 | 20–24/11 | Fotos e vídeos do decorado; criar a PMax nova (pacote `2026-11-19-nova-pmax.md`) | PMax | Você (+ Claude nos textos) | a fazer |
@@ -161,8 +162,8 @@ Regra: subir no máximo 20% por semana, e só no canal com custo por lead real d
 
 ## 10. Próximos passos
 
-**Claude, agora:** confirmar a aplicação das 23 alterações na rodada das 21:56; começar a página v1
-(publicação só com seu OK).
+**Claude, agora:** conferir na rodada das 21:56 que a campanha já mostra o raio de 12 km; começar a
+página v1 (publicação só com seu OK).
 
 **Você, quando puder:**
 1. No Google Ads → Scripts, deixar só o script 3.0 (pausar ou apagar as cópias antigas).
