@@ -32,7 +32,7 @@ export const SECTION_LABELS = {
 };
 
 export const CTA_LABELS = {
-  "hero-cta-whatsapp": "Quero condições exclusivas",
+  "hero-cta-whatsapp": "Receber condições no WhatsApp",
   "hero-cta-unit": "Garanta sua unidade",
   "hero-cta-visit": "Agendar visita",
   "hero-cta-talk": "Falar com corretor",

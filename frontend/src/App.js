@@ -16,7 +16,6 @@ const Footer = lazy(() => import("@/components/Footer"));
 
 const CookieConsent = lazy(() => import("@/components/CookieConsent"));
 const ScrollProgress = lazy(() => import("@/components/ScrollProgress"));
-const LLMContext = lazy(() => import("@/components/LLMContext"));
 const ThankYou = lazy(() => import("@/components/ThankYou"));
 const PrivacyPage = lazy(() => import("@/components/PrivacyPage"));
 
@@ -52,7 +51,6 @@ const Home = () => {
       
         <Suspense fallback={null}>
           <Footer />
-          <LLMContext />
           <CookieConsent />
         </Suspense>
       </div>

@@ -95,7 +95,7 @@ test("sectionLabel and ctaLabel cover the known ids", () => {
   expect(sectionLabel("faq")).toBe("Dúvidas");
   expect(sectionLabel("contato")).toBe("Formulário");
   expect(sectionLabel("galeria3d")).toBe("Galeria");
-  expect(ctaLabel("hero-cta-whatsapp")).toBe("Quero condições exclusivas");
+  expect(ctaLabel("hero-cta-whatsapp")).toBe("Receber condições no WhatsApp");
   expect(ctaLabel("hero-cta-unit")).toBe("Garanta sua unidade");
   expect(ctaLabel("hero-cta-talk")).toBe("Falar com corretor");
   expect(ctaLabel("header-cta-whatsapp")).toBe("Fale com corretor (topo)");

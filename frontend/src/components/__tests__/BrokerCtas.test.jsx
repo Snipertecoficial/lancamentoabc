@@ -90,15 +90,18 @@ describe("broker chat buttons go straight to WhatsApp", () => {
     expect(capture).not.toHaveBeenCalled();
   });
 
-  test("hero 'Falar com corretor' goes to WhatsApp; 'Agendar visita' and 'Quero condições exclusivas' keep the form", async () => {
+  test("hero 'Falar com corretor' and 'Receber condições no WhatsApp' go to WhatsApp; 'Agendar visita' keeps the form", async () => {
     await mount(<HeroSection />);
     await click($('[data-testid="hero-cta-talk"]'));
     expect(textOf(openSpy.mock.calls[0][0])).toBe(`${WA_MESSAGES.finalCta}\n\nCódigo do site: A1B2C3`);
+    await click($('[data-testid="hero-cta-whatsapp"]'));
+    expect($('[data-testid="hero-cta-whatsapp"]').textContent.trim()).toBe("Receber condições no WhatsApp");
+    expect(textOf(openSpy.mock.calls[1][0])).toBe(`${WA_MESSAGES.hero}\n\nCódigo do site: A1B2C3`);
+    expect(mockTrack.mock.calls.map((c) => c[1].source)).toEqual(["hero_falar_corretor", "hero_cta_whatsapp"]);
     expect(capture).not.toHaveBeenCalled();
 
     await click($('[data-testid="hero-cta-visit"]'));
-    await click($('[data-testid="hero-cta-whatsapp"]'));
-    expect(openSpy).toHaveBeenCalledTimes(1);
-    expect(capture.mock.calls.map((c) => c[0].source)).toEqual(["hero_agendar_visita", "hero_cta_whatsapp"]);
+    expect(openSpy).toHaveBeenCalledTimes(2);
+    expect(capture.mock.calls.map((c) => c[0].source)).toEqual(["hero_agendar_visita"]);
   });
 });

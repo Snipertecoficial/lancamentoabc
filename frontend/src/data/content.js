@@ -182,19 +182,19 @@ export const TESTIMONIALS = [
 export const FAQ_ITEMS = [
   {
     q: "Onde comprar apartamento na planta no ABC Paulista?",
-    a: "O melhor lançamento atual fica em São Bernardo do Campo, a 2 minutos do Shopping Metrópole. O empreendimento oferece plantas de 60m² a 74m² com 2 ou 3 dormitórios, varanda gourmet e infraestrutura completa de lazer de resort.",
+    a: "O lançamento fica na Av. Pereira Barreto, na divisa de Santo André com São Bernardo do Campo, a 2 minutos do Shopping Metrópole. O empreendimento oferece plantas de 60m² a 74m² com 2 ou 3 dormitórios, varanda gourmet e infraestrutura completa de lazer de resort.",
   },
   {
-    q: "Qual o valor do apartamento na planta em São Bernardo do Campo?",
+    q: "Qual o valor do apartamento na planta?",
     a: "Durante a oferta por tempo limitado de lançamento, as parcelas mensais começam em R$ 3.900 para as unidades compactas premium de 60m², e vão até R$ 5.200 para as plantas de 74m². Também aceitamos planos com entrada facilitada e parcela balão.",
   },
   {
-    q: "Quando será a entrega do lançamento em São Bernardo do Campo?",
+    q: "Quando será a entrega do lançamento?",
     a: "A entrega deste empreendimento está prevista e garantida para ocorrer em 3 anos. A obra já está em andamento (fase de projetos e terraplenagem em 2026). Fale com um corretor para receber a tabela oficial de obras.",
   },
   {
-    q: "O centro de São Bernardo do Campo é uma boa região para investir em imóveis?",
-    a: "Sim, é uma das regiões com maior potencial de valorização no ABC Paulista em 2026. A proximidade com o Shopping Metrópole e a chegada do futuro BRT-ABC atraem forte demanda por aluguel e revenda.",
+    q: "A divisa de Santo André com São Bernardo é uma boa região para investir em imóveis?",
+    a: "Sim, é uma das regiões com maior potencial de valorização no ABC Paulista em 2026. A proximidade com o Shopping Metrópole, o centro de São Bernardo e a chegada do futuro BRT-ABC atraem forte demanda por aluguel e revenda.",
   },
   {
     q: "Como funciona o financiamento de apartamento na planta?",

@@ -60,7 +60,7 @@ export function scrollToLeadForm() {
 }
 
 export const WA_MESSAGES = {
-  hero: "Oi! Quero saber mais sobre o lançamento em São Bernardo do Campo.",
+  hero: "Oi! Quero receber as condições exclusivas do lançamento na divisa Santo André/SBC.",
   visit: "Oi! Quero agendar uma visita ao decorado do lançamento em SBC.",
   invest: "Oi! Quero investir no lançamento em SBC. Pode me enviar a tabela e condições?",
   live: "Oi! Quero morar no lançamento em SBC. Pode me enviar as condições?",

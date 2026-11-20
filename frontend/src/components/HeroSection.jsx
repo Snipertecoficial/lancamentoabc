@@ -1,9 +1,10 @@
-import React, { useRef, useState } from "react";
-import { Bed, Car, Waves, Ruler, Sparkles, PlayCircle, MessageCircle, CalendarCheck, Play, Pause, Volume2, VolumeX } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Bed, Car, Waves, Ruler, Sparkles, MessageCircle, CalendarCheck, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { openWhatsApp, openWhatsAppDirect, WA_MESSAGES } from "@/lib/whatsapp";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 
 const ATTRS = [
-  { icon: Sparkles, label: "Varanda Gourmet", sub: "Lançamento SBC" },
+  { icon: Sparkles, label: "Varanda Gourmet", sub: "Divisa SA/SBC" },
   { icon: Bed, label: "2 ou 3 dorms", sub: "c/ suíte" },
   { icon: Car, label: "1 ou 2 vagas", sub: "garagem" },
   { icon: Waves, label: "+40 espaços", sub: "lazer resort" },
@@ -12,7 +13,22 @@ const ATTRS = [
 const HeroSection = () => {
   const videoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // The video sits just below the first phone screen: download and play it only once it shows up,
+  // so visitors who never scroll do not pull megabytes of video on 4G (the poster covers the wait).
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || typeof window.IntersectionObserver === "undefined") return undefined;
+    const io = new window.IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(() => {}); // autoplay refused: poster + play button stay
+    });
+    io.observe(video);
+    return () => io.disconnect();
+  }, []);
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -42,18 +58,18 @@ const HeroSection = () => {
             <div className="inline-flex self-center items-center gap-2 mb-5">
               <Sparkles className="text-[#7DB4E8]" size={14} />
               <span className="font-sans font-semibold uppercase tracking-[0.28em] text-[0.7rem] text-[#7DB4E8]">
-                Lançamento · São Bernardo do Campo
+                Lançamento · Divisa Santo André / São Bernardo
               </span>
             </div>
 
             {/* H1 */}
             <h1 className="font-display text-[2.2rem] leading-[1.08] md:text-[3.2rem] lg:text-[3.8rem] text-[#F0F5FA] mb-5 tracking-tight">
-              A 2 minutos do <span className="text-gold-grad">Shopping Metrópole</span> — SBC
+              Apartamentos na planta a 2 minutos do <span className="text-gold-grad">Shopping Metrópole</span>
             </h1>
 
             {/* Subtitle */}
             <p className="font-sans text-base md:text-lg text-[#F0F5FA]/70 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Plantas versáteis com 2 e 3 dorms, suíte e espaço pra home office. Tudo isso pertinho de shoppings, da estação de trólebus e da futura estação de BRT — <span className="text-[#7DB4E8] font-semibold">conectando SBC com metrô Tamanduateí em 20 minutos</span>.
+              2 ou 3 dorms com suíte e varanda gourmet, de 60 a 75 m², na Av. Pereira Barreto — divisa de Santo André com São Bernardo. Pertinho do trólebus e da futura estação do BRT: <span className="text-[#7DB4E8] font-semibold">metrô Tamanduateí em 20 minutos</span>.
             </p>
 
             {/* Attribute cards */}
@@ -69,8 +85,8 @@ const HeroSection = () => {
 
             {/* Primary CTAs */}
             <div className="order-1 sm:order-none flex flex-wrap items-center justify-center gap-3 mb-6 sm:mb-4" data-hero-ctas="">
-              <button className="btn-gold" onClick={() => openWhatsApp(WA_MESSAGES.hero, "hero_cta_whatsapp")} data-testid="hero-cta-whatsapp">
-                <PlayCircle size={16} /> Quero condições exclusivas
+              <button className="btn-gold" onClick={() => openWhatsAppDirect(WA_MESSAGES.hero, "hero_cta_whatsapp")} data-testid="hero-cta-whatsapp">
+                <WhatsAppIcon size={16} /> Receber condições no WhatsApp
               </button>
               <a href="#contato" className="btn-outline-gold" data-testid="hero-cta-unit">
                 Garanta sua unidade
@@ -102,18 +118,17 @@ const HeroSection = () => {
                   data-radar-video="hero"
                   className="w-full h-full object-cover"
                   poster="/tour-poster.jpg"
-                  autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="none"
                   aria-label="Tour Virtual"
                   data-testid="hero-video"
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
                   onVolumeChange={(e) => setIsMuted(e.currentTarget.muted)}
                 >
-                  <source src="/tour-video.mp4" type="video/mp4" />
+                  <source src="/tour-video-720.mp4" type="video/mp4" />
                 </video>
 
                 <div className="hero-video-controls">
