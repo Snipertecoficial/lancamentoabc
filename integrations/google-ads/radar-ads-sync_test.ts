@@ -14,11 +14,15 @@ function load(opts: {
   commands?: unknown[][]; // one list per pull, in order; then empty
   preview?: boolean;
   mutate?: (op: Row) => Mutation;
+  mutateAll?: (ops: Row[]) => Mutation[] | Error;
+  imageStatus?: (url: string) => number;
 } = {}) {
   const queries: string[] = [];
   const posts: Post[] = [];
   const logs: string[] = [];
   const mutations: Row[] = [];
+  const batches: { ops: Row[]; options: Row }[] = [];
+  const downloads: string[] = [];
   let sleeps = 0;
   const pulls = [...(opts.commands ?? [])];
   const AdsApp = {
@@ -36,9 +40,23 @@ function load(opts: {
       if (r instanceof Error) throw r;
       return { isSuccessful: () => r.ok, getErrorMessages: () => r.errors ?? [], getResourceName: () => null };
     },
+    mutateAll(ops: Row[], options: Row) {
+      batches.push({ ops, options });
+      const rs: Mutation[] | Error = opts.mutateAll ? opts.mutateAll(ops) : ops.map(() => ({ ok: true }));
+      if (rs instanceof Error) throw rs;
+      return rs.map((r) => {
+        if (r instanceof Error) throw r;
+        return { isSuccessful: () => r.ok, getErrorMessages: () => r.errors ?? [], getResourceName: () => null };
+      });
+    },
   };
   const UrlFetchApp = {
     fetch(url: string, o: Post["opts"]) {
+      if (!o || !o.payload) { // image download for a creation batch
+        downloads.push(url);
+        const code = opts.imageStatus ? opts.imageStatus(url) : 200;
+        return { getResponseCode: () => code, getContent: () => [1, 2, 3] };
+      }
       posts.push({ url, opts: o });
       const body = JSON.parse(o.payload) as Body;
       if (opts.reply) {
@@ -50,14 +68,14 @@ function load(opts: {
       return { getResponseCode: () => 200, getContentText: () => JSON.stringify(out) };
     },
   };
-  const Utilities = { formatDate: () => "2026-11-17", sleep: () => { sleeps++; } };
+  const Utilities = { formatDate: () => "2026-11-17", sleep: () => { sleeps++; }, base64Encode: (b: number[]) => `b64:${b.length}` };
   const Logger = { log: (s: string) => logs.push(s) };
   const api = new Function("AdsApp", "UrlFetchApp", "Utilities", "Logger",
     `${src}\nreturn { main, RADAR, radarAddDays_, radarCriterionId_ };`)(AdsApp, UrlFetchApp, Utilities, Logger);
   api.RADAR.SECRET = "chave-de-teste-1234567890";
   api.RADAR.WATCH_MINUTES = 0;
   const bodies = () => posts.map((p) => JSON.parse(p.opts.payload) as Body);
-  return { api, queries, posts, bodies, logs, mutations, sleeps: () => sleeps };
+  return { api, queries, posts, bodies, logs, mutations, batches, downloads, sleeps: () => sleeps };
 }
 
 const campaignRow = { segments: { date: "2026-11-16" }, campaign: { id: "111", name: "SBC Pesquisa", advertisingChannelType: "SEARCH" }, metrics: { impressions: "800", clicks: "40", costMicros: "80500000", conversions: 1 } };
@@ -362,4 +380,51 @@ Deno.test("script 3.0: campo que o Google nao conhece derruba so a sua parte do 
   const serving = (bodies().find((b) => b.reports)!.reports as { report: string; rows: Body[] }[]).find((r) => r.report === "campaign_serving")!;
   assertEquals(serving.rows[0], { kind: "status_error", error: "UNRECOGNIZED_FIELD: campaign.primary_status" });
   assertEquals(serving.rows[1].kind, "share");
+});
+
+const img = (name: string) => ({ $fetch_base64: `https://lancamento.espontone.com.br/ads/${name}` });
+const batchCmd = (id: number, operations: unknown[]) => ({ id, kind: "mutate_batch", campaign_id: "0", value: { operations } });
+
+Deno.test("script 3.1: lote de criacao troca {customer}, baixa as imagens do site e aplica tudo de uma vez", () => {
+  const ops = [
+    { campaignBudgetOperation: { create: { resourceName: "customers/{customer}/campaignBudgets/-1", amountMicros: 40000000 } } },
+    { assetOperation: { create: { resourceName: "customers/{customer}/assets/-10", name: "torres", imageAsset: { data: img("h-torres.jpg") } } } },
+    { assetGroupAssetOperation: { create: { assetGroup: "customers/{customer}/assetGroups/-3", asset: "customers/{customer}/assets/-10", fieldType: "MARKETING_IMAGE" } } },
+  ];
+  const { api, bodies, batches, downloads } = load({ commands: [[batchCmd(31, ops)]] });
+  api.main();
+  assertEquals(downloads, ["https://lancamento.espontone.com.br/ads/h-torres.jpg"]);
+  assertEquals(batches.length, 1);
+  assertEquals(batches[0].options, { partialFailure: false });
+  assertEquals(batches[0].ops, [
+    { campaignBudgetOperation: { create: { resourceName: "customers/1234567890/campaignBudgets/-1", amountMicros: 40000000 } } },
+    { assetOperation: { create: { resourceName: "customers/1234567890/assets/-10", name: "torres", imageAsset: { data: "b64:3" } } } },
+    { assetGroupAssetOperation: { create: { assetGroup: "customers/1234567890/assetGroups/-3", asset: "customers/1234567890/assets/-10", fieldType: "MARKETING_IMAGE" } } },
+  ]);
+  assertEquals(bodies()[1].results, [{ id: 31, ok: true }]);
+});
+
+Deno.test("script 3.1: operacao fora da lista, imagem de outro site, imagem que nao baixa e erro do Google viram falha", () => {
+  const budget = { campaignBudgetOperation: { create: { resourceName: "customers/{customer}/campaignBudgets/-1", amountMicros: 40000000 } } };
+  const commands = [
+    batchCmd(41, [budget, { customerUserAccessOperation: { remove: "x" } }]),
+    batchCmd(42, [{ assetOperation: { create: { imageAsset: { data: { $fetch_base64: "https://outro-site.com/a.jpg" } } } } }]),
+    batchCmd(43, [{ assetOperation: { create: { imageAsset: { data: img("sumiu.jpg") } } } }]),
+    batchCmd(44, [budget, budget]),
+    batchCmd(45, []),
+  ];
+  const { api, bodies, batches } = load({
+    commands: [commands],
+    imageStatus: (url) => (url.endsWith("sumiu.jpg") ? 404 : 200),
+    mutateAll: (ops) => ops.map((_, i) => (i === 1 ? { ok: false, errors: ["Orçamento duplicado"] } : { ok: true })),
+  });
+  api.main();
+  assertEquals(batches.length, 1); // only command 44 reaches Google
+  assertEquals(bodies()[1].results, [
+    { id: 41, ok: false, error: "Operação não permitida: customerUserAccessOperation" },
+    { id: 42, ok: false, error: "Imagem fora do site: https://outro-site.com/a.jpg" },
+    { id: 43, ok: false, error: "Imagem não baixou (404): https://lancamento.espontone.com.br/ads/sumiu.jpg" },
+    { id: 44, ok: false, error: "Orçamento duplicado" },
+    { id: 45, ok: false, error: "Nenhuma operação no lote." },
+  ]);
 });

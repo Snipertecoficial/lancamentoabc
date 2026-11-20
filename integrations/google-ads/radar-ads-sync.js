@@ -1,5 +1,5 @@
 /**
- * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 3.0.
+ * Radar — liga o Google Ads ao painel (lancamento.espontone.com.br/painel/anuncios). Versão 3.1.
  *
  * Como instalar (uma vez):
  *   1. Google Ads → Ferramentas → Ações em massa → Scripts → abra o script "Radar" (ou "+" para um novo).
@@ -12,7 +12,8 @@
  * O que ele faz a cada execução:
  *   - aplica as alterações pedidas no painel (pausar/ativar campanha ou palavra-chave, orçamento diário,
  *     palavra-chave negativa ou nova, raio de localização, "Presença", parceiros de pesquisa e conversão
- *     principal/secundária) e devolve o resultado de cada uma;
+ *     principal/secundária, e criação de campanha inteira — orçamento, textos, imagens do site,
+ *     raio, sinais de público — num lote só, que entra todo ou não entra nada) e devolve o resultado;
  *   - envia custo, cliques, impressões e conversões por dia, por campanha e por palavra-chave
  *     (últimos 90 dias, porque o Google ainda ajusta dias recentes) e o código de cada clique (gclid)
  *     dos últimos 30 dias, para ligar cada lead à campanha exata;
@@ -149,6 +150,8 @@ function radarApply_(ctx, c) {
       op = { conversionActionOperation: { update: { resourceName: prefix + '/conversionActions/' + v.conversion_action_id, primaryForGoal: v.primary }, updateMask: 'primary_for_goal' } };
     } else if (c.kind === 'campaign_location') {
       return radarSetRadius_(prefix, c, fail);
+    } else if (c.kind === 'mutate_batch') {
+      return radarMutateBatch_(ctx, c, fail);
     } else {
       return fail('Tipo de alteração desconhecido: ' + c.kind);
     }
@@ -185,6 +188,58 @@ function radarSetRadius_(prefix, c, fail) {
   }
   if (left.length) return fail('Raio criado, mas ' + left.length + ' local(is) antigo(s) ficaram: ' + left.join(' | '));
   return { id: c.id, ok: true };
+}
+
+// Operations a creation batch may carry (a whole campaign: budget, campaign, locations, assets, asset
+// group, signals, sitelinks, conversion goals). Anything else is refused.
+var RADAR_BATCH_OPS = [
+  'campaignBudgetOperation', 'campaignOperation', 'campaignCriterionOperation', 'assetOperation',
+  'assetGroupOperation', 'assetGroupAssetOperation', 'assetGroupSignalOperation', 'campaignAssetOperation',
+  'campaignConversionGoalOperation', 'customerConversionGoalOperation', 'adGroupOperation',
+  'adGroupAdOperation', 'adGroupCriterionOperation'
+];
+
+// Applies a list of Google Ads operations in one all-or-nothing request. In the list, "{customer}" stands
+// for this account and {"$fetch_base64": url} for the bytes of an image published on the site.
+function radarMutateBatch_(ctx, c, fail) {
+  var ops = (c.value || {}).operations || [];
+  if (!ops.length) return fail('Nenhuma operação no lote.');
+  for (var i = 0; i < ops.length; i++) {
+    var keys = Object.keys(ops[i] || {});
+    if (keys.length !== 1 || RADAR_BATCH_OPS.indexOf(keys[0]) < 0) return fail('Operação não permitida: ' + keys.join(','));
+  }
+  var results = AdsApp.mutateAll(radarFill_(ops, ctx.customerId), { partialFailure: false });
+  var errors = [];
+  for (var j = 0; j < results.length; j++) {
+    if (!results[j].isSuccessful()) errors.push(radarErrors_(results[j]));
+  }
+  if (errors.length) return fail(errors.join(' | ').slice(0, 480));
+  return { id: c.id, ok: true };
+}
+
+function radarFill_(node, customerId) {
+  if (typeof node === 'string') return node.split('{customer}').join(customerId);
+  if (Object.prototype.toString.call(node) === '[object Array]') {
+    var list = [];
+    for (var i = 0; i < node.length; i++) list.push(radarFill_(node[i], customerId));
+    return list;
+  }
+  if (node && typeof node === 'object') {
+    if (typeof node.$fetch_base64 === 'string') return radarImage_(node.$fetch_base64);
+    var out = {};
+    for (var k in node) {
+      if (Object.prototype.hasOwnProperty.call(node, k)) out[k] = radarFill_(node[k], customerId);
+    }
+    return out;
+  }
+  return node;
+}
+
+function radarImage_(url) {
+  if (!/^https:\/\/(www\.)?lancamento\.espontone\.com\.br\//.test(url)) throw new Error('Imagem fora do site: ' + url);
+  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) throw new Error('Imagem não baixou (' + res.getResponseCode() + '): ' + url);
+  return Utilities.base64Encode(res.getContent());
 }
 
 function radarBudgetOf_(campaignId) {
