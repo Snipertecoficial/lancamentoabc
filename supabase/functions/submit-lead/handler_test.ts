@@ -66,6 +66,33 @@ const post = (b: string, headers: Record<string, string> = {}) =>
   });
 const json = async (r: Response) => await r.json();
 
+Deno.test("lead de producao tambem vai para o RD CRM depois de gravado; staging nao vai", async () => {
+  const sent: unknown[] = [];
+  const order: string[] = [];
+  const { deps, calls } = fakeDeps({ forwardLead: (l) => { order.push(calls.order.join(",")); sent.push(l); } });
+  assertEquals((await handleSubmitLead(post(body({ env: "production" })), deps)).status, 200);
+  assertEquals(sent, [{ name: "Maria Silva", phone_e164: "+5511900000301", email: "m@x.com", intent: "morar" }]);
+  assertEquals(order, ["count,visitor,session,events,lead"]); // only after the lead is saved
+
+  await handleSubmitLead(post(body()), deps); // staging
+  assertEquals(sent.length, 1);
+});
+
+Deno.test("falha ao mandar para o RD CRM nao atrapalha o lead do visitante", async () => {
+  const { deps } = fakeDeps({ forwardLead: () => { throw new Error("rd fora do ar"); } });
+  const res = await handleSubmitLead(post(body({ env: "production" })), deps);
+  assertEquals(res.status, 200);
+  assertEquals((await json(res)).ok, true);
+});
+
+Deno.test("bot e dado invalido nao vao para o RD CRM", async () => {
+  const sent: unknown[] = [];
+  const { deps } = fakeDeps({ forwardLead: (l) => { sent.push(l); } });
+  await handleSubmitLead(post(body({ env: "production", hp: "spam" })), deps);
+  await handleSubmitLead(post(body({ env: "production", phone: "123" })), deps);
+  assertEquals(sent, []);
+});
+
 Deno.test("valido: grava visitor, sessao, evento sem PII, depois recordLead; 200 com token", async () => {
   const { deps, calls } = fakeDeps();
   const res = await handleSubmitLead(post(body()), deps);

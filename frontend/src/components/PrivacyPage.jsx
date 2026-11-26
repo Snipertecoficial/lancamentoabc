@@ -37,7 +37,7 @@ const PrivacyPage = () => {
 
       <main className="mx-auto px-5 py-12" style={{ maxWidth: "70ch" }}>
         <h1 className="font-display text-3xl md:text-4xl text-[#F0F5FA] mb-3">Política de Privacidade</h1>
-        <p className="text-sm text-[#F0F5FA]/60 mb-10">Última atualização: 17/11/2026</p>
+        <p className="text-sm text-[#F0F5FA]/60 mb-10">Última atualização: 26/11/2026</p>
 
         <Section title="1. Quem somos">
           <p>
@@ -94,6 +94,7 @@ const PrivacyPage = () => {
           <List items={[
             "Supabase: armazenamento dos dados",
             "Hostgator: hospedagem da página",
+            "RD Station: sistema de atendimento (CRM) onde nossos corretores registram e acompanham o seu contato",
             "Google e Microsoft: métricas e anúncios",
           ]} />
           <p>
@@ -143,7 +144,7 @@ const PrivacyPage = () => {
         <Section title="10. Atualizações desta política">
           <p>
             Podemos atualizar esta política. A data da versão em vigor aparece no topo desta página.
-            Última atualização: 17/11/2026.
+            Última atualização: 26/11/2026.
           </p>
         </Section>
 

@@ -5,6 +5,7 @@ import { normalizePhoneBR } from "../_shared/phone.ts";
 import { ipHashOf } from "../_shared/ip.ts";
 import { isBot } from "../_shared/bot.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+import type { CrmLead } from "../_shared/rdcrm.ts";
 
 export type SubmitLeadDeps = {
   upsertSession(b: Batch, ipHash: string, isBot: boolean, userAgent: string | null): Promise<void>;
@@ -21,6 +22,8 @@ export type SubmitLeadDeps = {
     lead_token: string;
   }): Promise<string>;
   countRecentLeadSubmissions(ipHash: string): Promise<number>;
+  // Copy of each production lead for RD Station CRM; runs in the background (set only with a CRM token).
+  forwardLead?(lead: CrmLead): void;
   allowedOrigins: string[];
   ipSalt: string;
 };
@@ -116,6 +119,13 @@ export async function handleSubmitLead(req: Request, deps: SubmitLeadDeps): Prom
       visitor_id: visitorId,
       lead_token: leadToken,
     });
+    if (env === "production" && deps.forwardLead) {
+      try {
+        deps.forwardLead({ name, phone_e164: phoneE164, email, intent });
+      } catch {
+        console.error("submit-lead: envio ao RD CRM falhou"); // the lead is saved; never block the visitor
+      }
+    }
     return reply(200, { ok: true, lead_token: leadToken });
   } catch {
     console.error("submit-lead failed"); // sem err.message: pode conter PII (detalhes de constraint)

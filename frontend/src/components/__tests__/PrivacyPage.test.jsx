@@ -30,8 +30,9 @@ test("PrivacyPage renders the key sections, controller data and contact e-mail",
   [
     "Quem somos", "Dados que coletamos", "Cookies", "Para que usamos", "Bases legais",
     "Compartilhamento", "Por quanto tempo", "Seus direitos", "Escolhas sobre cookies",
-    "Atualizações", "Última atualização: 17/11/2026", "Espontone Imóveis", "042656-J",
+    "Atualizações", "Última atualização: 26/11/2026", "Espontone Imóveis", "042656-J",
   ].forEach((s) => expect(text).toContain(s));
+  expect(text).toContain("RD Station: sistema de atendimento (CRM) onde nossos corretores registram e acompanham o seu contato");
   expect(text).not.toContain("desativadas");
   expect(text).toContain("modo de consentimento, sem armazenar cookies ou identificadores");
   expect(text).toContain("sem identificador persistente");
